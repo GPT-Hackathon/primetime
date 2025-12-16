@@ -12,6 +12,13 @@ Clarity and User Guidance: The script prints each generated SQL statement with a
 The Generic Python Script
 Here is the Python script. You can save it as generate_etl_sql.py and run it. It will read a file named mapping_rules.json (containing the JSON you provided) from the same directory.
 
+Here is a review of the changes I'll make to the Python script to incorporate this idempotent logic:
+
+Idempotency via MERGE: The core change is to replace all INSERT INTO ... SELECT ... statements with MERGE INTO ... USING ... ON .... This is the standard and most efficient way to handle "upsert" (update or insert) logic in BigQuery.
+Primary Key Utilization: The MERGE statement's ON clause requires a key to match rows between the source and target. I will dynamically build this join condition using the primary_key array defined in your JSON mapping rules.
+Complex Source Handling: For mappings that involve multiple source tables (like the UNION for fact_indicator_values or the PIVOT for agg_country_year), the script will now wrap the source query in a Common Table Expression (CTE) to make it a valid source for the MERGE statement.
+Dynamic UPDATE and INSERT Clauses: The script will automatically generate the column lists for both the WHEN MATCHED THEN UPDATE and WHEN NOT MATCHED THEN INSERT clauses based on the column mappings in the JSON rules.
+Clarity and Maintainability: I've refactored the SQL generation functions to be more descriptive (e.g., generate_merge_sql_from_single_source) and have added comments to the generated SQL to explain the MERGE logic.
 
 The Generic Python Script
 Here is the Python script. You can save it as generate_etl_sql.py and run it. It will read a file named mapping_rules.json (containing the JSON you provided) from the same directory.
