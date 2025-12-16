@@ -1,0 +1,17 @@
+
+Hackathon Instructions
+======================
+
+Goal: Build a generative-AI agent (or agent pipeline) that can perform ETL from the provided source CSVs into the target BigQuery schema, including:
+- schema discovery and mapping
+- validation rules enforcement and error handling
+- transformations and aggregations for reporting
+- idempotent loads and lineage tracking
+- automated tests and sample assertions
+
+Starter ideas (challenge tiers):
+- Bronze: Implement a basic agent that reads CSVs, validates schema, and loads into BigQuery tables using the provided DDL.
+- Silver: Add automatic deduplication, type coercion, and validation reports saved to a 'staging_errors' table.
+- Gold: Implement automatic anomaly detection on numeric indicators and suggest corrective transformations using explainable steps.
+- Platinum: Build an agent that auto-generates SQL transformations and implements CI/CD integration to run on new CSV arrivals.
+

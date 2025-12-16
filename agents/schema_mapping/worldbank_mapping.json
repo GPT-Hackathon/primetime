@@ -1,0 +1,1043 @@
+{
+  "metadata": {
+    "source_dataset": "ccibt-hack25ww7-750.worldbank_staging_dataset",
+    "target_dataset": "ccibt-hack25ww7-750.worldbank_target_dataset",
+    "generated_at": "2023-10-27T10:00:00Z",
+    "confidence": "high"
+  },
+  "mappings": [
+    {
+      "source_table": "ccibt-hack25ww7-750.worldbank_staging_dataset.staging_countries",
+      "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.dim_country",
+      "match_confidence": 1.0,
+      "column_mappings": [
+        {
+          "source_column": "country_code",
+          "target_column": "country_key",
+          "source_type": "STRING",
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Direct map. Source 'country_code' serves as the primary key 'country_key' in the target dimension table."
+        },
+        {
+          "source_column": "country_name",
+          "target_column": "country_name",
+          "source_type": "STRING",
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Direct mapping."
+        },
+        {
+          "source_column": "iso3",
+          "target_column": "iso3",
+          "source_type": "STRING",
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Direct mapping."
+        },
+        {
+          "source_column": "region",
+          "target_column": "region",
+          "source_type": "STRING",
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Direct mapping."
+        },
+        {
+          "source_column": "income_group",
+          "target_column": "income_group",
+          "source_type": "STRING",
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Direct mapping."
+        }
+      ],
+      "unmapped_source_columns": [],
+      "unmapped_target_columns": [],
+      "validation_rules": [
+        {
+          "column": "country_key",
+          "type": "NOT_NULL",
+          "reason": "Target column is REQUIRED."
+        },
+        {
+          "column": "country_key",
+          "type": "UNIQUENESS",
+          "reason": "Primary key for dim_country."
+        }
+      ],
+      "primary_key": [
+        "country_key"
+      ],
+      "uniqueness_constraints": [
+        "country_key"
+      ]
+    },
+    {
+      "source_table": "ccibt-hack25ww7-750.worldbank_staging_dataset.staging_indicators_meta",
+      "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.dim_indicator",
+      "match_confidence": 1.0,
+      "column_mappings": [
+        {
+          "source_column": "indicator_code",
+          "target_column": "indicator_code",
+          "source_type": "STRING",
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Direct map. Source 'indicator_code' serves as the primary key 'indicator_code' in the target dimension table."
+        },
+        {
+          "source_column": "indicator_name",
+          "target_column": "indicator_name",
+          "source_type": "STRING",
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Direct mapping."
+        },
+        {
+          "source_column": "topic",
+          "target_column": "topic",
+          "source_type": "STRING",
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Direct mapping."
+        }
+      ],
+      "unmapped_source_columns": [],
+      "unmapped_target_columns": [],
+      "validation_rules": [
+        {
+          "column": "indicator_code",
+          "type": "NOT_NULL",
+          "reason": "Target column is REQUIRED."
+        },
+        {
+          "column": "indicator_code",
+          "type": "UNIQUENESS",
+          "reason": "Primary key for dim_indicator."
+        }
+      ],
+      "primary_key": [
+        "indicator_code"
+      ],
+      "uniqueness_constraints": [
+        "indicator_code"
+      ]
+    },
+    {
+      "source_table": "ccibt-hack25ww7-750.worldbank_staging_dataset.staging_gdp",
+      "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.dim_time",
+      "match_confidence": 0.9,
+      "column_mappings": [
+        {
+          "source_column": "year",
+          "target_column": "year",
+          "source_type": "INTEGER",
+          "target_type": "INTEGER",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Direct map. 'year' from any staging table can populate this dimension. 'staging_gdp' chosen as a representative source."
+        },
+        {
+          "source_column": "year",
+          "target_column": "year_key",
+          "source_type": "INTEGER",
+          "target_type": "STRING",
+          "type_conversion_needed": true,
+          "transformation": "CAST(year AS STRING)",
+          "notes": "Derive string key from year integer."
+        }
+      ],
+      "unmapped_source_columns": [
+        "country_code",
+        "iso3",
+        "indicator_code",
+        "value"
+      ],
+      "unmapped_target_columns": [],
+      "validation_rules": [
+        {
+          "column": "year",
+          "type": "NOT_NULL",
+          "reason": "Target column is REQUIRED."
+        },
+        {
+          "column": "year",
+          "type": "UNIQUENESS",
+          "reason": "Primary key for dim_time."
+        },
+        {
+          "column": "year",
+          "type": "NUMERIC_RANGE",
+          "reason": "Typical range for years in world bank data.",
+          "min_value": 1900,
+          "max_value": 2100
+        }
+      ],
+      "primary_key": [
+        "year"
+      ],
+      "uniqueness_constraints": [
+        "year"
+      ]
+    },
+    {
+      "source_table": "ccibt-hack25ww7-750.worldbank_staging_dataset.staging_co2_emissions",
+      "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.fact_indicator_values",
+      "match_confidence": 0.95,
+      "column_mappings": [
+        {
+          "source_column": "country_code",
+          "target_column": "country_key",
+          "source_type": "STRING",
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Foreign key to dim_country."
+        },
+        {
+          "source_column": "year",
+          "target_column": "year",
+          "source_type": "INTEGER",
+          "target_type": "INTEGER",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Foreign key to dim_time."
+        },
+        {
+          "source_column": "indicator_code",
+          "target_column": "indicator_code",
+          "source_type": "STRING",
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Foreign key to dim_indicator. Represents CO2 Emissions indicator."
+        },
+        {
+          "source_column": "value",
+          "target_column": "numeric_value",
+          "source_type": "INTEGER",
+          "target_type": "NUMERIC",
+          "type_conversion_needed": true,
+          "transformation": "CAST(value AS NUMERIC)",
+          "notes": "The CO2 emissions value."
+        },
+        {
+          "source_column": null,
+          "target_column": "data_source",
+          "source_type": null,
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": "'staging_co2_emissions'",
+          "notes": "Indicates the source staging table for the fact value."
+        },
+        {
+          "source_column": null,
+          "target_column": "loaded_at",
+          "source_type": null,
+          "target_type": "TIMESTAMP",
+          "type_conversion_needed": false,
+          "transformation": "CURRENT_TIMESTAMP()",
+          "notes": "Timestamp when the record was loaded."
+        }
+      ],
+      "unmapped_source_columns": [
+        "iso3"
+      ],
+      "unmapped_target_columns": [],
+      "validation_rules": [
+        {
+          "column": "country_key",
+          "type": "NOT_NULL",
+          "reason": "Part of the composite primary key for the fact table."
+        },
+        {
+          "column": "year",
+          "type": "NOT_NULL",
+          "reason": "Part of the composite primary key for the fact table."
+        },
+        {
+          "column": "indicator_code",
+          "type": "NOT_NULL",
+          "reason": "Part of the composite primary key for the fact table."
+        },
+        {
+          "column": "country_key",
+          "type": "FOREIGN_KEY",
+          "reason": "Refers to dim_country.country_key."
+        },
+        {
+          "column": "year",
+          "type": "FOREIGN_KEY",
+          "reason": "Refers to dim_time.year."
+        },
+        {
+          "column": "indicator_code",
+          "type": "FOREIGN_KEY",
+          "reason": "Refers to dim_indicator.indicator_code."
+        },
+        {
+          "column": "numeric_value",
+          "type": "NUMERIC_TYPE_CHECK",
+          "reason": "Ensure the value is numeric."
+        }
+      ],
+      "primary_key": [
+        "country_key",
+        "year",
+        "indicator_code"
+      ],
+      "uniqueness_constraints": [
+        "country_key",
+        "year",
+        "indicator_code"
+      ]
+    },
+    {
+      "source_table": "ccibt-hack25ww7-750.worldbank_staging_dataset.staging_gdp",
+      "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.fact_indicator_values",
+      "match_confidence": 0.95,
+      "column_mappings": [
+        {
+          "source_column": "country_code",
+          "target_column": "country_key",
+          "source_type": "STRING",
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Foreign key to dim_country."
+        },
+        {
+          "source_column": "year",
+          "target_column": "year",
+          "source_type": "INTEGER",
+          "target_type": "INTEGER",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Foreign key to dim_time."
+        },
+        {
+          "source_column": "indicator_code",
+          "target_column": "indicator_code",
+          "source_type": "STRING",
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Foreign key to dim_indicator. Represents GDP indicator."
+        },
+        {
+          "source_column": "value",
+          "target_column": "numeric_value",
+          "source_type": "INTEGER",
+          "target_type": "NUMERIC",
+          "type_conversion_needed": true,
+          "transformation": "CAST(value AS NUMERIC)",
+          "notes": "The GDP value."
+        },
+        {
+          "source_column": null,
+          "target_column": "data_source",
+          "source_type": null,
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": "'staging_gdp'",
+          "notes": "Indicates the source staging table for the fact value."
+        },
+        {
+          "source_column": null,
+          "target_column": "loaded_at",
+          "source_type": null,
+          "target_type": "TIMESTAMP",
+          "type_conversion_needed": false,
+          "transformation": "CURRENT_TIMESTAMP()",
+          "notes": "Timestamp when the record was loaded."
+        }
+      ],
+      "unmapped_source_columns": [
+        "iso3"
+      ],
+      "unmapped_target_columns": [],
+      "validation_rules": [
+        {
+          "column": "country_key",
+          "type": "NOT_NULL",
+          "reason": "Part of the composite primary key for the fact table."
+        },
+        {
+          "column": "year",
+          "type": "NOT_NULL",
+          "reason": "Part of the composite primary key for the fact table."
+        },
+        {
+          "column": "indicator_code",
+          "type": "NOT_NULL",
+          "reason": "Part of the composite primary key for the fact table."
+        },
+        {
+          "column": "country_key",
+          "type": "FOREIGN_KEY",
+          "reason": "Refers to dim_country.country_key."
+        },
+        {
+          "column": "year",
+          "type": "FOREIGN_KEY",
+          "reason": "Refers to dim_time.year."
+        },
+        {
+          "column": "indicator_code",
+          "type": "FOREIGN_KEY",
+          "reason": "Refers to dim_indicator.indicator_code."
+        },
+        {
+          "column": "numeric_value",
+          "type": "NUMERIC_TYPE_CHECK",
+          "reason": "Ensure the value is numeric."
+        }
+      ],
+      "primary_key": [
+        "country_key",
+        "year",
+        "indicator_code"
+      ],
+      "uniqueness_constraints": [
+        "country_key",
+        "year",
+        "indicator_code"
+      ]
+    },
+    {
+      "source_table": "ccibt-hack25ww7-750.worldbank_staging_dataset.staging_life_expectancy",
+      "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.fact_indicator_values",
+      "match_confidence": 0.95,
+      "column_mappings": [
+        {
+          "source_column": "country_code",
+          "target_column": "country_key",
+          "source_type": "STRING",
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Foreign key to dim_country."
+        },
+        {
+          "source_column": "year",
+          "target_column": "year",
+          "source_type": "INTEGER",
+          "target_type": "INTEGER",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Foreign key to dim_time."
+        },
+        {
+          "source_column": "indicator_code",
+          "target_column": "indicator_code",
+          "source_type": "STRING",
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Foreign key to dim_indicator. Represents Life Expectancy indicator."
+        },
+        {
+          "source_column": "value",
+          "target_column": "numeric_value",
+          "source_type": "FLOAT",
+          "target_type": "NUMERIC",
+          "type_conversion_needed": true,
+          "transformation": "CAST(value AS NUMERIC)",
+          "notes": "The Life Expectancy value."
+        },
+        {
+          "source_column": null,
+          "target_column": "data_source",
+          "source_type": null,
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": "'staging_life_expectancy'",
+          "notes": "Indicates the source staging table for the fact value."
+        },
+        {
+          "source_column": null,
+          "target_column": "loaded_at",
+          "source_type": null,
+          "target_type": "TIMESTAMP",
+          "type_conversion_needed": false,
+          "transformation": "CURRENT_TIMESTAMP()",
+          "notes": "Timestamp when the record was loaded."
+        }
+      ],
+      "unmapped_source_columns": [
+        "iso3"
+      ],
+      "unmapped_target_columns": [],
+      "validation_rules": [
+        {
+          "column": "country_key",
+          "type": "NOT_NULL",
+          "reason": "Part of the composite primary key for the fact table."
+        },
+        {
+          "column": "year",
+          "type": "NOT_NULL",
+          "reason": "Part of the composite primary key for the fact table."
+        },
+        {
+          "column": "indicator_code",
+          "type": "NOT_NULL",
+          "reason": "Part of the composite primary key for the fact table."
+        },
+        {
+          "column": "country_key",
+          "type": "FOREIGN_KEY",
+          "reason": "Refers to dim_country.country_key."
+        },
+        {
+          "column": "year",
+          "type": "FOREIGN_KEY",
+          "reason": "Refers to dim_time.year."
+        },
+        {
+          "column": "indicator_code",
+          "type": "FOREIGN_KEY",
+          "reason": "Refers to dim_indicator.indicator_code."
+        },
+        {
+          "column": "numeric_value",
+          "type": "NUMERIC_TYPE_CHECK",
+          "reason": "Ensure the value is numeric."
+        }
+      ],
+      "primary_key": [
+        "country_key",
+        "year",
+        "indicator_code"
+      ],
+      "uniqueness_constraints": [
+        "country_key",
+        "year",
+        "indicator_code"
+      ]
+    },
+    {
+      "source_table": "ccibt-hack25ww7-750.worldbank_staging_dataset.staging_population",
+      "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.fact_indicator_values",
+      "match_confidence": 0.95,
+      "column_mappings": [
+        {
+          "source_column": "country_code",
+          "target_column": "country_key",
+          "source_type": "STRING",
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Foreign key to dim_country."
+        },
+        {
+          "source_column": "year",
+          "target_column": "year",
+          "source_type": "INTEGER",
+          "target_type": "INTEGER",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Foreign key to dim_time."
+        },
+        {
+          "source_column": "indicator_code",
+          "target_column": "indicator_code",
+          "source_type": "STRING",
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Foreign key to dim_indicator. Represents Population indicator."
+        },
+        {
+          "source_column": "value",
+          "target_column": "numeric_value",
+          "source_type": "INTEGER",
+          "target_type": "NUMERIC",
+          "type_conversion_needed": true,
+          "transformation": "CAST(value AS NUMERIC)",
+          "notes": "The Population value."
+        },
+        {
+          "source_column": null,
+          "target_column": "data_source",
+          "source_type": null,
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": "'staging_population'",
+          "notes": "Indicates the source staging table for the fact value."
+        },
+        {
+          "source_column": null,
+          "target_column": "loaded_at",
+          "source_type": null,
+          "target_type": "TIMESTAMP",
+          "type_conversion_needed": false,
+          "transformation": "CURRENT_TIMESTAMP()",
+          "notes": "Timestamp when the record was loaded."
+        }
+      ],
+      "unmapped_source_columns": [
+        "iso3"
+      ],
+      "unmapped_target_columns": [],
+      "validation_rules": [
+        {
+          "column": "country_key",
+          "type": "NOT_NULL",
+          "reason": "Part of the composite primary key for the fact table."
+        },
+        {
+          "column": "year",
+          "type": "NOT_NULL",
+          "reason": "Part of the composite primary key for the fact table."
+        },
+        {
+          "column": "indicator_code",
+          "type": "NOT_NULL",
+          "reason": "Part of the composite primary key for the fact table."
+        },
+        {
+          "column": "country_key",
+          "type": "FOREIGN_KEY",
+          "reason": "Refers to dim_country.country_key."
+        },
+        {
+          "column": "year",
+          "type": "FOREIGN_KEY",
+          "reason": "Refers to dim_time.year."
+        },
+        {
+          "column": "indicator_code",
+          "type": "FOREIGN_KEY",
+          "reason": "Refers to dim_indicator.indicator_code."
+        },
+        {
+          "column": "numeric_value",
+          "type": "NUMERIC_TYPE_CHECK",
+          "reason": "Ensure the value is numeric."
+        }
+      ],
+      "primary_key": [
+        "country_key",
+        "year",
+        "indicator_code"
+      ],
+      "uniqueness_constraints": [
+        "country_key",
+        "year",
+        "indicator_code"
+      ]
+    },
+    {
+      "source_table": "ccibt-hack25ww7-750.worldbank_staging_dataset.staging_poverty_headcount",
+      "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.fact_indicator_values",
+      "match_confidence": 0.95,
+      "column_mappings": [
+        {
+          "source_column": "country_code",
+          "target_column": "country_key",
+          "source_type": "STRING",
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Foreign key to dim_country."
+        },
+        {
+          "source_column": "year",
+          "target_column": "year",
+          "source_type": "INTEGER",
+          "target_type": "INTEGER",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Foreign key to dim_time."
+        },
+        {
+          "source_column": "indicator_code",
+          "target_column": "indicator_code",
+          "source_type": "STRING",
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Foreign key to dim_indicator. Represents Poverty Headcount indicator."
+        },
+        {
+          "source_column": "value",
+          "target_column": "numeric_value",
+          "source_type": "FLOAT",
+          "target_type": "NUMERIC",
+          "type_conversion_needed": true,
+          "transformation": "CAST(value AS NUMERIC)",
+          "notes": "The Poverty Headcount value."
+        },
+        {
+          "source_column": null,
+          "target_column": "data_source",
+          "source_type": null,
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": "'staging_poverty_headcount'",
+          "notes": "Indicates the source staging table for the fact value."
+        },
+        {
+          "source_column": null,
+          "target_column": "loaded_at",
+          "source_type": null,
+          "target_type": "TIMESTAMP",
+          "type_conversion_needed": false,
+          "transformation": "CURRENT_TIMESTAMP()",
+          "notes": "Timestamp when the record was loaded."
+        }
+      ],
+      "unmapped_source_columns": [
+        "iso3"
+      ],
+      "unmapped_target_columns": [],
+      "validation_rules": [
+        {
+          "column": "country_key",
+          "type": "NOT_NULL",
+          "reason": "Part of the composite primary key for the fact table."
+        },
+        {
+          "column": "year",
+          "type": "NOT_NULL",
+          "reason": "Part of the composite primary key for the fact table."
+        },
+        {
+          "column": "indicator_code",
+          "type": "NOT_NULL",
+          "reason": "Part of the composite primary key for the fact table."
+        },
+        {
+          "column": "country_key",
+          "type": "FOREIGN_KEY",
+          "reason": "Refers to dim_country.country_key."
+        },
+        {
+          "column": "year",
+          "type": "FOREIGN_KEY",
+          "reason": "Refers to dim_time.year."
+        },
+        {
+          "column": "indicator_code",
+          "type": "FOREIGN_KEY",
+          "reason": "Refers to dim_indicator.indicator_code."
+        },
+        {
+          "column": "numeric_value",
+          "type": "NUMERIC_TYPE_CHECK",
+          "reason": "Ensure the value is numeric."
+        },
+        {
+          "column": "numeric_value",
+          "type": "NUMERIC_RANGE",
+          "reason": "Poverty headcount is a percentage.",
+          "min_value": 0,
+          "max_value": 100
+        }
+      ],
+      "primary_key": [
+        "country_key",
+        "year",
+        "indicator_code"
+      ],
+      "uniqueness_constraints": [
+        "country_key",
+        "year",
+        "indicator_code"
+      ]
+    },
+    {
+      "source_table": "ccibt-hack25ww7-750.worldbank_staging_dataset.staging_primary_enrollment",
+      "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.fact_indicator_values",
+      "match_confidence": 0.95,
+      "column_mappings": [
+        {
+          "source_column": "country_code",
+          "target_column": "country_key",
+          "source_type": "STRING",
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Foreign key to dim_country."
+        },
+        {
+          "source_column": "year",
+          "target_column": "year",
+          "source_type": "INTEGER",
+          "target_type": "INTEGER",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Foreign key to dim_time."
+        },
+        {
+          "source_column": "indicator_code",
+          "target_column": "indicator_code",
+          "source_type": "STRING",
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": null,
+          "notes": "Foreign key to dim_indicator. Represents Primary Enrollment indicator."
+        },
+        {
+          "source_column": "value",
+          "target_column": "numeric_value",
+          "source_type": "FLOAT",
+          "target_type": "NUMERIC",
+          "type_conversion_needed": true,
+          "transformation": "CAST(value AS NUMERIC)",
+          "notes": "The Primary Enrollment value."
+        },
+        {
+          "source_column": null,
+          "target_column": "data_source",
+          "source_type": null,
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": "'staging_primary_enrollment'",
+          "notes": "Indicates the source staging table for the fact value."
+        },
+        {
+          "source_column": null,
+          "target_column": "loaded_at",
+          "source_type": null,
+          "target_type": "TIMESTAMP",
+          "type_conversion_needed": false,
+          "transformation": "CURRENT_TIMESTAMP()",
+          "notes": "Timestamp when the record was loaded."
+        }
+      ],
+      "unmapped_source_columns": [
+        "iso3"
+      ],
+      "unmapped_target_columns": [],
+      "validation_rules": [
+        {
+          "column": "country_key",
+          "type": "NOT_NULL",
+          "reason": "Part of the composite primary key for the fact table."
+        },
+        {
+          "column": "year",
+          "type": "NOT_NULL",
+          "reason": "Part of the composite primary key for the fact table."
+        },
+        {
+          "column": "indicator_code",
+          "type": "NOT_NULL",
+          "reason": "Part of the composite primary key for the fact table."
+        },
+        {
+          "column": "country_key",
+          "type": "FOREIGN_KEY",
+          "reason": "Refers to dim_country.country_key."
+        },
+        {
+          "column": "year",
+          "type": "FOREIGN_KEY",
+          "reason": "Refers to dim_time.year."
+        },
+        {
+          "column": "indicator_code",
+          "type": "FOREIGN_KEY",
+          "reason": "Refers to dim_indicator.indicator_code."
+        },
+        {
+          "column": "numeric_value",
+          "type": "NUMERIC_TYPE_CHECK",
+          "reason": "Ensure the value is numeric."
+        },
+        {
+          "column": "numeric_value",
+          "type": "NUMERIC_RANGE",
+          "reason": "Primary enrollment is a percentage.",
+          "min_value": 0,
+          "max_value": 100
+        }
+      ],
+      "primary_key": [
+        "country_key",
+        "year",
+        "indicator_code"
+      ],
+      "uniqueness_constraints": [
+        "country_key",
+        "year",
+        "indicator_code"
+      ]
+    },
+    {
+      "source_table": "ccibt-hack25ww7-750.worldbank_staging_dataset.MULTI_TABLE_JOIN",
+      "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.agg_country_year",
+      "match_confidence": 0.85,
+      "column_mappings": [
+        {
+          "source_column": "staging_gdp.country_code",
+          "target_column": "country_key",
+          "source_type": "STRING",
+          "target_type": "STRING",
+          "type_conversion_needed": false,
+          "transformation": "SELECT T1.country_code FROM `ccibt-hack25ww7-750.worldbank_staging_dataset.staging_gdp` AS T1 GROUP BY T1.country_code, T1.year",
+          "notes": "Derived from country_code in any staging table, e.g., staging_gdp, acts as a foreign key to dim_country."
+        },
+        {
+          "source_column": "staging_gdp.year",
+          "target_column": "year",
+          "source_type": "INTEGER",
+          "target_type": "INTEGER",
+          "type_conversion_needed": false,
+          "transformation": "SELECT T1.year FROM `ccibt-hack25ww7-750.worldbank_staging_dataset.staging_gdp` AS T1 GROUP BY T1.country_code, T1.year",
+          "notes": "Derived from year in any staging table, e.g., staging_gdp, acts as a foreign key to dim_time."
+        },
+        {
+          "source_column": "staging_gdp.value",
+          "target_column": "gdp",
+          "source_type": "INTEGER",
+          "target_type": "NUMERIC",
+          "type_conversion_needed": true,
+          "transformation": "CAST((SELECT value FROM `ccibt-hack25ww7-750.worldbank_staging_dataset.staging_gdp` WHERE country_code = T1.country_key AND year = T1.year) AS NUMERIC)",
+          "notes": "Join staging_gdp on country_code and year to get the GDP value. Cast INTEGER to NUMERIC."
+        },
+        {
+          "source_column": "staging_population.value",
+          "target_column": "population",
+          "source_type": "INTEGER",
+          "target_type": "INTEGER",
+          "type_conversion_needed": false,
+          "transformation": "(SELECT value FROM `ccibt-hack25ww7-750.worldbank_staging_dataset.staging_population` WHERE country_code = T1.country_key AND year = T1.year)",
+          "notes": "Join staging_population on country_code and year to get the population value."
+        },
+        {
+          "source_column": "staging_gdp.value / staging_population.value",
+          "target_column": "gdp_per_capita",
+          "source_type": "INTEGER / INTEGER",
+          "target_type": "NUMERIC",
+          "type_conversion_needed": true,
+          "transformation": "SAFE_DIVIDE( (SELECT value FROM `ccibt-hack25ww7-750.worldbank_staging_dataset.staging_gdp` WHERE country_code = T1.country_key AND year = T1.year), (SELECT value FROM `ccibt-hack25ww7-750.worldbank_staging_dataset.staging_population` WHERE country_code = T1.country_key AND year = T1.year) )",
+          "notes": "Calculated as GDP / Population. Result type is NUMERIC."
+        },
+        {
+          "source_column": "staging_life_expectancy.value",
+          "target_column": "life_expectancy",
+          "source_type": "FLOAT",
+          "target_type": "FLOAT",
+          "type_conversion_needed": false,
+          "transformation": "(SELECT value FROM `ccibt-hack25ww7-750.worldbank_staging_dataset.staging_life_expectancy` WHERE country_code = T1.country_key AND year = T1.year)",
+          "notes": "Join staging_life_expectancy on country_code and year to get life expectancy."
+        },
+        {
+          "source_column": "staging_co2_emissions.value",
+          "target_column": "co2_emissions",
+          "source_type": "INTEGER",
+          "target_type": "INTEGER",
+          "type_conversion_needed": false,
+          "transformation": "(SELECT value FROM `ccibt-hack25ww7-750.worldbank_staging_dataset.staging_co2_emissions` WHERE country_code = T1.country_key AND year = T1.year)",
+          "notes": "Join staging_co2_emissions on country_code and year to get CO2 emissions."
+        },
+        {
+          "source_column": "staging_primary_enrollment.value",
+          "target_column": "primary_enrollment",
+          "source_type": "FLOAT",
+          "target_type": "FLOAT",
+          "type_conversion_needed": false,
+          "transformation": "(SELECT value FROM `ccibt-hack25ww7-750.worldbank_staging_dataset.staging_primary_enrollment` WHERE country_code = T1.country_key AND year = T1.year)",
+          "notes": "Join staging_primary_enrollment on country_code and year to get primary enrollment."
+        },
+        {
+          "source_column": "staging_poverty_headcount.value",
+          "target_column": "poverty_headcount",
+          "source_type": "FLOAT",
+          "target_type": "FLOAT",
+          "type_conversion_needed": false,
+          "transformation": "(SELECT value FROM `ccibt-hack25ww7-750.worldbank_staging_dataset.staging_poverty_headcount` WHERE country_code = T1.country_key AND year = T1.year)",
+          "notes": "Join staging_poverty_headcount on country_code and year to get poverty headcount."
+        }
+      ],
+      "unmapped_source_columns": [],
+      "unmapped_target_columns": [],
+      "validation_rules": [
+        {
+          "column": "country_key",
+          "type": "NOT_NULL",
+          "reason": "Part of the composite primary key for the aggregate fact table."
+        },
+        {
+          "column": "year",
+          "type": "NOT_NULL",
+          "reason": "Part of the composite primary key for the aggregate fact table."
+        },
+        {
+          "column": "country_key",
+          "type": "FOREIGN_KEY",
+          "reason": "Refers to dim_country.country_key."
+        },
+        {
+          "column": "year",
+          "type": "FOREIGN_KEY",
+          "reason": "Refers to dim_time.year."
+        },
+        {
+          "column": "gdp",
+          "type": "NUMERIC_TYPE_CHECK",
+          "reason": "Ensure the value is numeric."
+        },
+        {
+          "column": "population",
+          "type": "NUMERIC_TYPE_CHECK",
+          "reason": "Ensure the value is numeric and non-negative.",
+          "min_value": 0
+        },
+        {
+          "column": "gdp_per_capita",
+          "type": "NUMERIC_TYPE_CHECK",
+          "reason": "Ensure the value is numeric and non-negative.",
+          "min_value": 0
+        },
+        {
+          "column": "life_expectancy",
+          "type": "NUMERIC_TYPE_CHECK",
+          "reason": "Ensure the value is numeric and reasonable range.",
+          "min_value": 0,
+          "max_value": 100
+        },
+        {
+          "column": "co2_emissions",
+          "type": "NUMERIC_TYPE_CHECK",
+          "reason": "Ensure the value is numeric and non-negative.",
+          "min_value": 0
+        },
+        {
+          "column": "primary_enrollment",
+          "type": "NUMERIC_TYPE_CHECK",
+          "reason": "Ensure the value is numeric and within a percentage range.",
+          "min_value": 0,
+          "max_value": 100
+        },
+        {
+          "column": "poverty_headcount",
+          "type": "NUMERIC_TYPE_CHECK",
+          "reason": "Ensure the value is numeric and within a percentage range.",
+          "min_value": 0,
+          "max_value": 100
+        }
+      ],
+      "primary_key": [
+        "country_key",
+        "year"
+      ],
+      "uniqueness_constraints": [
+        "country_key",
+        "year"
+      ]
+    }
+  ]
+}

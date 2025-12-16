@@ -1,0 +1,72 @@
+# Source Table Descriptions
+
+## countries
+File: source_countries.csv
+Columns:
+- country_code (STRING) - Internal country code
+- country_name (STRING) - Full country name
+- region (STRING) - World Bank region grouping
+- income_group (STRING) - World Bank income classification
+- iso3 (STRING) - ISO3 country code
+
+## indicators_meta
+File: source_indicators_meta.csv
+Columns:
+- indicator_code (STRING) - 
+- indicator_name (STRING) - 
+- topic (STRING) - 
+
+## gdp
+File: source_gdp.csv
+Columns:
+- country_code (STRING) - 
+- iso3 (STRING) - 
+- year (INTEGER) - 
+- indicator_code (STRING) - 
+- value (NUMERIC) - 
+
+## population
+File: source_population.csv
+Columns:
+- country_code (STRING) - 
+- iso3 (STRING) - 
+- year (INTEGER) - 
+- indicator_code (STRING) - 
+- value (INTEGER) - 
+
+## life_expectancy
+File: source_life_expectancy.csv
+Columns:
+- country_code (STRING) - 
+- iso3 (STRING) - 
+- year (INTEGER) - 
+- indicator_code (STRING) - 
+- value (FLOAT) - 
+
+## co2_emissions
+File: source_co2_emissions.csv
+Columns:
+- country_code (STRING) - 
+- iso3 (STRING) - 
+- year (INTEGER) - 
+- indicator_code (STRING) - 
+- value (INTEGER) - 
+
+## primary_enrollment
+File: source_primary_enrollment.csv
+Columns:
+- country_code (STRING) - 
+- iso3 (STRING) - 
+- year (INTEGER) - 
+- indicator_code (STRING) - 
+- value (FLOAT) - 
+
+## poverty_headcount
+File: source_poverty_headcount.csv
+Columns:
+- country_code (STRING) - 
+- iso3 (STRING) - 
+- year (INTEGER) - 
+- indicator_code (STRING) - 
+- value (FLOAT) - 
+
