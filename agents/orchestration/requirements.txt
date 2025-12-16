@@ -1,0 +1,16 @@
+# Orchestration Agent Dependencies
+
+# Core dependencies
+google-adk>=1.0.0
+python-dotenv==1.0.0
+
+# Google Cloud dependencies
+google-cloud-bigquery>=3.13.0
+google-cloud-aiplatform>=1.38.0
+
+# Vertex AI
+vertexai>=1.38.0
+
+# Note: Also depends on schema_mapping and validation agents
+# Ensure those agents' dependencies are also installed
+
