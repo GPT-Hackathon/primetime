@@ -1,0 +1,752 @@
+{
+    "status": "success",
+    "message": null,
+    "mapping": {
+        "metadata": {
+            "source_dataset": "ccibt-hack25ww7-750.worldbank_staging_dataset",
+            "target_dataset": "ccibt-hack25ww7-750.worldbank_target_dataset",
+            "generated_at": "2024-07-30T12:00:00Z",
+            "confidence": "high",
+            "mode": "FIX"
+        },
+        "mappings": [
+            {
+                "source_table": "ccibt-hack25ww7-750.worldbank_staging_dataset.staging_countries",
+                "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.dim_country",
+                "match_confidence": 0.95,
+                "column_mappings": [
+                    {
+                        "source_column": "country_code",
+                        "target_column": "country_key",
+                        "source_type": "STRING",
+                        "target_type": "STRING",
+                        "type_conversion_needed": false,
+                        "transformation": null,
+                        "notes": "Direct mapping of country_code to country_key."
+                    },
+                    {
+                        "source_column": "country_name",
+                        "target_column": "country_name",
+                        "source_type": "STRING",
+                        "target_type": "STRING",
+                        "type_conversion_needed": false,
+                        "transformation": null,
+                        "notes": "Direct mapping."
+                    },
+                    {
+                        "source_column": "iso3",
+                        "target_column": "iso3",
+                        "source_type": "STRING",
+                        "target_type": "STRING",
+                        "type_conversion_needed": false,
+                        "transformation": null,
+                        "notes": "Direct mapping."
+                    },
+                    {
+                        "source_column": "region",
+                        "target_column": "region",
+                        "source_type": "STRING",
+                        "target_type": "STRING",
+                        "type_conversion_needed": false,
+                        "transformation": null,
+                        "notes": "Direct mapping."
+                    },
+                    {
+                        "source_column": "income_group",
+                        "target_column": "income_group",
+                        "source_type": "STRING",
+                        "target_type": "STRING",
+                        "type_conversion_needed": false,
+                        "transformation": null,
+                        "notes": "Direct mapping."
+                    }
+                ],
+                "unmapped_source_columns": [],
+                "unmapped_target_columns": [],
+                "mapping_errors": [],
+                "validation_rules": [
+                    {
+                        "column": "country_key",
+                        "type": "NOT_NULL",
+                        "reason": "Target column is REQUIRED."
+                    }
+                ],
+                "primary_key": [
+                    "country_key"
+                ],
+                "uniqueness_constraints": [
+                    "country_key"
+                ]
+            },
+            {
+                "source_table": "ccibt-hack25ww7-750.worldbank_staging_dataset.staging_indicators_meta",
+                "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.dim_indicator",
+                "match_confidence": 0.95,
+                "column_mappings": [
+                    {
+                        "source_column": "indicator_code",
+                        "target_column": "indicator_code",
+                        "source_type": "STRING",
+                        "target_type": "STRING",
+                        "type_conversion_needed": false,
+                        "transformation": null,
+                        "notes": "Direct mapping."
+                    },
+                    {
+                        "source_column": "indicator_name",
+                        "target_column": "indicator_name",
+                        "source_type": "STRING",
+                        "target_type": "STRING",
+                        "type_conversion_needed": false,
+                        "transformation": null,
+                        "notes": "Direct mapping."
+                    },
+                    {
+                        "source_column": "topic",
+                        "target_column": "topic",
+                        "source_type": "STRING",
+                        "target_type": "STRING",
+                        "type_conversion_needed": false,
+                        "transformation": null,
+                        "notes": "Direct mapping."
+                    }
+                ],
+                "unmapped_source_columns": [],
+                "unmapped_target_columns": [],
+                "mapping_errors": [],
+                "validation_rules": [
+                    {
+                        "column": "indicator_code",
+                        "type": "NOT_NULL",
+                        "reason": "Target column is REQUIRED."
+                    }
+                ],
+                "primary_key": [
+                    "indicator_code"
+                ],
+                "uniqueness_constraints": [
+                    "indicator_code"
+                ]
+            },
+            {
+                "source_table": "ccibt-hack25ww7-750.worldbank_staging_dataset.staging_gdp",
+                "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.dim_time",
+                "match_confidence": 0.7,
+                "column_mappings": [
+                    {
+                        "source_column": "year",
+                        "target_column": "year",
+                        "source_type": "INTEGER",
+                        "target_type": "INTEGER",
+                        "type_conversion_needed": false,
+                        "transformation": null,
+                        "notes": "Mapping from staging_gdp.year as a representative source for years."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "year_key",
+                        "source_type": "EXPRESSION",
+                        "target_type": "STRING",
+                        "type_conversion_needed": true,
+                        "transformation": "DEFAULT: CAST(year AS STRING)",
+                        "notes": "Generated year_key from year column for string representation."
+                    }
+                ],
+                "unmapped_source_columns": [
+                    "country_code",
+                    "iso3",
+                    "indicator_code",
+                    "value"
+                ],
+                "unmapped_target_columns": [],
+                "mapping_errors": [],
+                "validation_rules": [
+                    {
+                        "column": "year",
+                        "type": "NOT_NULL",
+                        "reason": "Target column is REQUIRED."
+                    }
+                ],
+                "primary_key": [
+                    "year"
+                ],
+                "uniqueness_constraints": [
+                    "year"
+                ]
+            },
+            {
+                "source_table": "Multiple Staging Tables (staging_co2_emissions, staging_gdp, staging_life_expectancy, staging_population, staging_poverty_headcount, staging_primary_enrollment)",
+                "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.agg_country_year",
+                "match_confidence": 0.8,
+                "column_mappings": [
+                    {
+                        "source_column": "staging_gdp.country_code",
+                        "target_column": "country_key",
+                        "source_type": "STRING",
+                        "target_type": "STRING",
+                        "type_conversion_needed": false,
+                        "transformation": null,
+                        "notes": "Mapped from country_code in staging_gdp, assuming join across sources."
+                    },
+                    {
+                        "source_column": "staging_gdp.year",
+                        "target_column": "year",
+                        "source_type": "INTEGER",
+                        "target_type": "INTEGER",
+                        "type_conversion_needed": false,
+                        "transformation": null,
+                        "notes": "Mapped from year in staging_gdp, assuming join across sources."
+                    },
+                    {
+                        "source_column": "staging_gdp.value",
+                        "target_column": "gdp",
+                        "source_type": "INTEGER",
+                        "target_type": "NUMERIC",
+                        "type_conversion_needed": true,
+                        "transformation": "CAST(staging_gdp.value AS NUMERIC)",
+                        "notes": "GDP value from staging_gdp, requires type conversion."
+                    },
+                    {
+                        "source_column": "staging_population.value",
+                        "target_column": "population",
+                        "source_type": "INTEGER",
+                        "target_type": "INTEGER",
+                        "type_conversion_needed": false,
+                        "transformation": null,
+                        "notes": "Population value from staging_population."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "gdp_per_capita",
+                        "source_type": "EXPRESSION",
+                        "target_type": "NUMERIC",
+                        "type_conversion_needed": true,
+                        "transformation": "DEFAULT: SAFE_DIVIDE(CAST(staging_gdp.value AS NUMERIC), staging_population.value)",
+                        "notes": "Calculated field: GDP divided by Population. Uses SAFE_DIVIDE to handle potential division by zero."
+                    },
+                    {
+                        "source_column": "staging_life_expectancy.value",
+                        "target_column": "life_expectancy",
+                        "source_type": "FLOAT",
+                        "target_type": "FLOAT",
+                        "type_conversion_needed": false,
+                        "transformation": null,
+                        "notes": "Life expectancy value from staging_life_expectancy."
+                    },
+                    {
+                        "source_column": "staging_co2_emissions.value",
+                        "target_column": "co2_emissions",
+                        "source_type": "INTEGER",
+                        "target_type": "INTEGER",
+                        "type_conversion_needed": false,
+                        "transformation": null,
+                        "notes": "CO2 emissions value from staging_co2_emissions."
+                    },
+                    {
+                        "source_column": "staging_primary_enrollment.value",
+                        "target_column": "primary_enrollment",
+                        "source_type": "FLOAT",
+                        "target_type": "FLOAT",
+                        "type_conversion_needed": false,
+                        "transformation": null,
+                        "notes": "Primary enrollment value from staging_primary_enrollment."
+                    },
+                    {
+                        "source_column": "staging_poverty_headcount.value",
+                        "target_column": "poverty_headcount",
+                        "source_type": "FLOAT",
+                        "target_type": "FLOAT",
+                        "type_conversion_needed": false,
+                        "transformation": null,
+                        "notes": "Poverty headcount value from staging_poverty_headcount."
+                    }
+                ],
+                "unmapped_source_columns": [],
+                "unmapped_target_columns": [],
+                "mapping_errors": [],
+                "validation_rules": [],
+                "primary_key": [
+                    "country_key",
+                    "year"
+                ],
+                "uniqueness_constraints": [
+                    "country_key",
+                    "year"
+                ]
+            },
+            {
+                "source_table": "Multiple Staging Tables (Union of relevant staging tables)",
+                "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.fact_indicator_values",
+                "match_confidence": 0.85,
+                "column_mappings": [
+                    {
+                        "source_column": "country_code",
+                        "target_column": "country_key",
+                        "source_type": "STRING",
+                        "target_type": "STRING",
+                        "type_conversion_needed": false,
+                        "transformation": null,
+                        "notes": "Mapped from country_code across all indicator staging tables."
+                    },
+                    {
+                        "source_column": "year",
+                        "target_column": "year",
+                        "source_type": "INTEGER",
+                        "target_type": "INTEGER",
+                        "type_conversion_needed": false,
+                        "transformation": null,
+                        "notes": "Mapped from year across all indicator staging tables."
+                    },
+                    {
+                        "source_column": "indicator_code",
+                        "target_column": "indicator_code",
+                        "source_type": "STRING",
+                        "target_type": "STRING",
+                        "type_conversion_needed": false,
+                        "transformation": null,
+                        "notes": "Mapped from indicator_code across all indicator staging tables."
+                    },
+                    {
+                        "source_column": "value",
+                        "target_column": "numeric_value",
+                        "source_type": "INTEGER/FLOAT",
+                        "target_type": "NUMERIC",
+                        "type_conversion_needed": true,
+                        "transformation": "CAST(value AS NUMERIC)",
+                        "notes": "Generic value column from all indicator staging tables, requires conversion to NUMERIC."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "data_source",
+                        "source_type": "EXPRESSION",
+                        "target_type": "STRING",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 'source_table_name'",
+                        "notes": "Generated to indicate the original staging table for the indicator value."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "loaded_at",
+                        "source_type": "EXPRESSION",
+                        "target_type": "TIMESTAMP",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: CURRENT_TIMESTAMP()",
+                        "notes": "Auto-generated timestamp for audit purposes."
+                    }
+                ],
+                "unmapped_source_columns": [],
+                "unmapped_target_columns": [],
+                "mapping_errors": [],
+                "validation_rules": [],
+                "primary_key": [
+                    "country_key",
+                    "year",
+                    "indicator_code",
+                    "data_source"
+                ],
+                "uniqueness_constraints": [
+                    "country_key",
+                    "year",
+                    "indicator_code",
+                    "data_source"
+                ]
+            },
+            {
+                "source_table": "UNMAPPED",
+                "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.dim_risk_rating",
+                "match_confidence": 0.1,
+                "column_mappings": [
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "rating_id",
+                        "source_type": "EXPRESSION",
+                        "target_type": "INTEGER",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 0",
+                        "notes": "No source column found. Defaulting to 0 for INTEGER type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "loan_id",
+                        "source_type": "EXPRESSION",
+                        "target_type": "INTEGER",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 0",
+                        "notes": "No source column found. Defaulting to 0 for INTEGER type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "borrower_id",
+                        "source_type": "EXPRESSION",
+                        "target_type": "INTEGER",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 0",
+                        "notes": "No source column found. Defaulting to 0 for INTEGER type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "rating_agency",
+                        "source_type": "EXPRESSION",
+                        "target_type": "STRING",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 'UNKNOWN'",
+                        "notes": "No source column found. Defaulting to 'UNKNOWN' for STRING type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "rating_grade",
+                        "source_type": "EXPRESSION",
+                        "target_type": "STRING",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 'UNKNOWN'",
+                        "notes": "No source column found. Defaulting to 'UNKNOWN' for STRING type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "score",
+                        "source_type": "EXPRESSION",
+                        "target_type": "NUMERIC",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 0.0",
+                        "notes": "No source column found. Defaulting to 0.0 for NUMERIC type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "effective_date",
+                        "source_type": "EXPRESSION",
+                        "target_type": "DATE",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: CURRENT_DATE()",
+                        "notes": "No source column found. Defaulting to current date for DATE type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "expiry_date",
+                        "source_type": "EXPRESSION",
+                        "target_type": "DATE",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: CURRENT_DATE()",
+                        "notes": "No source column found. Defaulting to current date for DATE type."
+                    }
+                ],
+                "unmapped_source_columns": [],
+                "unmapped_target_columns": [],
+                "mapping_errors": [
+                    {
+                        "error_type": "NO_SOURCE_TABLE_MATCH",
+                        "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.dim_risk_rating",
+                        "severity": "WARNING",
+                        "message": "No direct source table found for dim_risk_rating. All columns generated with default values."
+                    }
+                ],
+                "validation_rules": [],
+                "primary_key": [
+                    "rating_id"
+                ],
+                "uniqueness_constraints": [
+                    "rating_id"
+                ]
+            },
+            {
+                "source_table": "UNMAPPED",
+                "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.fact_loan_snapshot",
+                "match_confidence": 0.1,
+                "column_mappings": [
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "loan_id",
+                        "source_type": "EXPRESSION",
+                        "target_type": "INTEGER",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 0",
+                        "notes": "No source column found. Defaulting to 0 for INTEGER type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "borrower_id",
+                        "source_type": "EXPRESSION",
+                        "target_type": "INTEGER",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 0",
+                        "notes": "No source column found. Defaulting to 0 for INTEGER type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "facility_id",
+                        "source_type": "EXPRESSION",
+                        "target_type": "INTEGER",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 0",
+                        "notes": "No source column found. Defaulting to 0 for INTEGER type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "snapshot_date_key",
+                        "source_type": "EXPRESSION",
+                        "target_type": "INTEGER",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 0",
+                        "notes": "No source column found. Defaulting to 0 for INTEGER type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "snapshot_date",
+                        "source_type": "EXPRESSION",
+                        "target_type": "DATE",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: CURRENT_DATE()",
+                        "notes": "No source column found. Defaulting to current date for DATE type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "outstanding_principal",
+                        "source_type": "EXPRESSION",
+                        "target_type": "NUMERIC",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 0.0",
+                        "notes": "No source column found. Defaulting to 0.0 for NUMERIC type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "current_rate_pct",
+                        "source_type": "EXPRESSION",
+                        "target_type": "NUMERIC",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 0.0",
+                        "notes": "No source column found. Defaulting to 0.0 for NUMERIC type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "margin_bps",
+                        "source_type": "EXPRESSION",
+                        "target_type": "INTEGER",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 0",
+                        "notes": "No source column found. Defaulting to 0 for INTEGER type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "rating_grade",
+                        "source_type": "EXPRESSION",
+                        "target_type": "STRING",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 'UNKNOWN'",
+                        "notes": "No source column found. Defaulting to 'UNKNOWN' for STRING type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "score",
+                        "source_type": "EXPRESSION",
+                        "target_type": "NUMERIC",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 0.0",
+                        "notes": "No source column found. Defaulting to 0.0 for NUMERIC type."
+                    }
+                ],
+                "unmapped_source_columns": [],
+                "unmapped_target_columns": [],
+                "mapping_errors": [
+                    {
+                        "error_type": "NO_SOURCE_TABLE_MATCH",
+                        "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.fact_loan_snapshot",
+                        "severity": "WARNING",
+                        "message": "No direct source table found for fact_loan_snapshot. All columns generated with default values."
+                    }
+                ],
+                "validation_rules": [],
+                "primary_key": [
+                    "loan_id",
+                    "snapshot_date"
+                ],
+                "uniqueness_constraints": [
+                    "loan_id",
+                    "snapshot_date"
+                ]
+            },
+            {
+                "source_table": "UNMAPPED",
+                "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.fact_payments",
+                "match_confidence": 0.1,
+                "column_mappings": [
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "payment_id",
+                        "source_type": "EXPRESSION",
+                        "target_type": "INTEGER",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 0",
+                        "notes": "No source column found. Defaulting to 0 for INTEGER type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "date_key",
+                        "source_type": "EXPRESSION",
+                        "target_type": "INTEGER",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 0",
+                        "notes": "No source column found. Defaulting to 0 for INTEGER type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "payment_date",
+                        "source_type": "EXPRESSION",
+                        "target_type": "DATE",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: CURRENT_DATE()",
+                        "notes": "No source column found. Defaulting to current date for DATE type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "loan_id",
+                        "source_type": "EXPRESSION",
+                        "target_type": "INTEGER",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 0",
+                        "notes": "No source column found. Defaulting to 0 for INTEGER type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "borrower_id",
+                        "source_type": "EXPRESSION",
+                        "target_type": "INTEGER",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 0",
+                        "notes": "No source column found. Defaulting to 0 for INTEGER type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "facility_id",
+                        "source_type": "EXPRESSION",
+                        "target_type": "INTEGER",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 0",
+                        "notes": "No source column found. Defaulting to 0 for INTEGER type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "index_id",
+                        "source_type": "EXPRESSION",
+                        "target_type": "INTEGER",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 0",
+                        "notes": "No source column found. Defaulting to 0 for INTEGER type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "index_name",
+                        "source_type": "EXPRESSION",
+                        "target_type": "STRING",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 'UNKNOWN'",
+                        "notes": "No source column found. Defaulting to 'UNKNOWN' for STRING type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "tenor_months",
+                        "source_type": "EXPRESSION",
+                        "target_type": "INTEGER",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 0",
+                        "notes": "No source column found. Defaulting to 0 for INTEGER type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "payment_amount",
+                        "source_type": "EXPRESSION",
+                        "target_type": "NUMERIC",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 0.0",
+                        "notes": "No source column found. Defaulting to 0.0 for NUMERIC type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "principal_component",
+                        "source_type": "EXPRESSION",
+                        "target_type": "NUMERIC",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 0.0",
+                        "notes": "No source column found. Defaulting to 0.0 for NUMERIC type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "interest_component",
+                        "source_type": "EXPRESSION",
+                        "target_type": "NUMERIC",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 0.0",
+                        "notes": "No source column found. Defaulting to 0.0 for NUMERIC type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "fee_component",
+                        "source_type": "EXPRESSION",
+                        "target_type": "NUMERIC",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 0.0",
+                        "notes": "No source column found. Defaulting to 0.0 for NUMERIC type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "days_past_due",
+                        "source_type": "EXPRESSION",
+                        "target_type": "INTEGER",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 0",
+                        "notes": "No source column found. Defaulting to 0 for INTEGER type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "currency",
+                        "source_type": "EXPRESSION",
+                        "target_type": "STRING",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 'UNKNOWN'",
+                        "notes": "No source column found. Defaulting to 'UNKNOWN' for STRING type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "payment_method",
+                        "source_type": "EXPRESSION",
+                        "target_type": "STRING",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 'UNKNOWN'",
+                        "notes": "No source column found. Defaulting to 'UNKNOWN' for STRING type."
+                    },
+                    {
+                        "source_column": "GENERATED",
+                        "target_column": "margin_bps",
+                        "source_type": "EXPRESSION",
+                        "target_type": "INTEGER",
+                        "type_conversion_needed": false,
+                        "transformation": "DEFAULT: 0",
+                        "notes": "No source column found. Defaulting to 0 for INTEGER type."
+                    }
+                ],
+                "unmapped_source_columns": [],
+                "unmapped_target_columns": [],
+                "mapping_errors": [
+                    {
+                        "error_type": "NO_SOURCE_TABLE_MATCH",
+                        "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.fact_payments",
+                        "severity": "WARNING",
+                        "message": "No direct source table found for fact_payments. All columns generated with default values."
+                    }
+                ],
+                "validation_rules": [],
+                "primary_key": [
+                    "payment_id"
+                ],
+                "uniqueness_constraints": [
+                    "payment_id"
+                ]
+            }
+        ]
+    },
+    "metadata": {
+        "source_dataset": "worldbank_staging_dataset",
+        "target_dataset": "worldbank_target_dataset",
+        "mode": "FIX",
+        "num_mappings": 8,
+        "confidence": "high"
+    }
+}

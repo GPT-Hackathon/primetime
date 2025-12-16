@@ -10,4 +10,7 @@ dependencies = [
     "torch>=2.9.1",
     "torchaudio>=2.9.1",
     "torchvision>=0.24.1",
+    "google-cloud-bigquery>=3.25.0",
+    "thefuzz>=0.22.1",
+    "python-Levenshtein>=0.25.0",
 ]

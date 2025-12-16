@@ -1,0 +1,30 @@
+{
+  "description": "Target BigQuery schema for analytics.",
+  "tables": [
+    {
+      "table_name": "dim_country",
+      "ddl_file": "target_dim_country.sql",
+      "description": "Denormalized country dimension for analytical joins."
+    },
+    {
+      "table_name": "dim_time",
+      "ddl_file": "target_dim_time.sql",
+      "description": "Year dimension."
+    },
+    {
+      "table_name": "dim_indicator",
+      "ddl_file": "target_dim_indicator.sql",
+      "description": "Indicator metadata."
+    },
+    {
+      "table_name": "fact_indicator_values",
+      "ddl_file": "target_fact_indicator_values.sql",
+      "description": "Fact table storing numeric values for indicators across countries and years."
+    },
+    {
+      "table_name": "agg_country_year",
+      "ddl_file": "target_agg_country_year.sql",
+      "description": "Pre-aggregated table for reporting: one row per country-year with commonly used metrics."
+    }
+  ]
+}

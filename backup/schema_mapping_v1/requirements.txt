@@ -1,0 +1,8 @@
+# Schema Mapping Agent Dependencies
+# Install with: pip install -r requirements.txt
+
+google-adk>=1.21.0
+google-cloud-bigquery>=3.25.0
+thefuzz>=0.22.1
+python-Levenshtein>=0.25.0
+
