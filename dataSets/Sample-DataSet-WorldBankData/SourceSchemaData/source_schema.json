@@ -1,0 +1,210 @@
+{
+  "description": "Source schema based on World Bank World Development Indicators (synthetic sample for hackathon).",
+  "tables": [
+    {
+      "table_name": "countries",
+      "file": "source_countries.csv",
+      "columns": [
+        {
+          "name": "country_code",
+          "type": "STRING",
+          "description": "Internal country code"
+        },
+        {
+          "name": "country_name",
+          "type": "STRING",
+          "description": "Full country name"
+        },
+        {
+          "name": "region",
+          "type": "STRING",
+          "description": "World Bank region grouping"
+        },
+        {
+          "name": "income_group",
+          "type": "STRING",
+          "description": "World Bank income classification"
+        },
+        {
+          "name": "iso3",
+          "type": "STRING",
+          "description": "ISO3 country code"
+        }
+      ]
+    },
+    {
+      "table_name": "indicators_meta",
+      "file": "source_indicators_meta.csv",
+      "columns": [
+        {
+          "name": "indicator_code",
+          "type": "STRING"
+        },
+        {
+          "name": "indicator_name",
+          "type": "STRING"
+        },
+        {
+          "name": "topic",
+          "type": "STRING"
+        }
+      ]
+    },
+    {
+      "table_name": "gdp",
+      "file": "source_gdp.csv",
+      "columns": [
+        {
+          "name": "country_code",
+          "type": "STRING"
+        },
+        {
+          "name": "iso3",
+          "type": "STRING"
+        },
+        {
+          "name": "year",
+          "type": "INTEGER"
+        },
+        {
+          "name": "indicator_code",
+          "type": "STRING"
+        },
+        {
+          "name": "value",
+          "type": "NUMERIC"
+        }
+      ]
+    },
+    {
+      "table_name": "population",
+      "file": "source_population.csv",
+      "columns": [
+        {
+          "name": "country_code",
+          "type": "STRING"
+        },
+        {
+          "name": "iso3",
+          "type": "STRING"
+        },
+        {
+          "name": "year",
+          "type": "INTEGER"
+        },
+        {
+          "name": "indicator_code",
+          "type": "STRING"
+        },
+        {
+          "name": "value",
+          "type": "INTEGER"
+        }
+      ]
+    },
+    {
+      "table_name": "life_expectancy",
+      "file": "source_life_expectancy.csv",
+      "columns": [
+        {
+          "name": "country_code",
+          "type": "STRING"
+        },
+        {
+          "name": "iso3",
+          "type": "STRING"
+        },
+        {
+          "name": "year",
+          "type": "INTEGER"
+        },
+        {
+          "name": "indicator_code",
+          "type": "STRING"
+        },
+        {
+          "name": "value",
+          "type": "FLOAT"
+        }
+      ]
+    },
+    {
+      "table_name": "co2_emissions",
+      "file": "source_co2_emissions.csv",
+      "columns": [
+        {
+          "name": "country_code",
+          "type": "STRING"
+        },
+        {
+          "name": "iso3",
+          "type": "STRING"
+        },
+        {
+          "name": "year",
+          "type": "INTEGER"
+        },
+        {
+          "name": "indicator_code",
+          "type": "STRING"
+        },
+        {
+          "name": "value",
+          "type": "INTEGER"
+        }
+      ]
+    },
+    {
+      "table_name": "primary_enrollment",
+      "file": "source_primary_enrollment.csv",
+      "columns": [
+        {
+          "name": "country_code",
+          "type": "STRING"
+        },
+        {
+          "name": "iso3",
+          "type": "STRING"
+        },
+        {
+          "name": "year",
+          "type": "INTEGER"
+        },
+        {
+          "name": "indicator_code",
+          "type": "STRING"
+        },
+        {
+          "name": "value",
+          "type": "FLOAT"
+        }
+      ]
+    },
+    {
+      "table_name": "poverty_headcount",
+      "file": "source_poverty_headcount.csv",
+      "columns": [
+        {
+          "name": "country_code",
+          "type": "STRING"
+        },
+        {
+          "name": "iso3",
+          "type": "STRING"
+        },
+        {
+          "name": "year",
+          "type": "INTEGER"
+        },
+        {
+          "name": "indicator_code",
+          "type": "STRING"
+        },
+        {
+          "name": "value",
+          "type": "FLOAT"
+        }
+      ]
+    }
+  ]
+}
