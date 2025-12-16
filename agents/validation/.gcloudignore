@@ -1,0 +1,16 @@
+# Ignore files for Cloud Build
+.git
+.gitignore
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+*.md
+test_*.py
+run_*.py
+data_validator.py
+*.json
