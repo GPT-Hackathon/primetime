@@ -1,0 +1,22 @@
+# Target Table Descriptions
+
+## dim_country
+DDL file: target_dim_country.sql
+Description: Denormalized country dimension for analytical joins.
+
+## dim_time
+DDL file: target_dim_time.sql
+Description: Year dimension.
+
+## dim_indicator
+DDL file: target_dim_indicator.sql
+Description: Indicator metadata.
+
+## fact_indicator_values
+DDL file: target_fact_indicator_values.sql
+Description: Fact table storing numeric values for indicators across countries and years.
+
+## agg_country_year
+DDL file: target_agg_country_year.sql
+Description: Pre-aggregated table for reporting: one row per country-year with commonly used metrics.
+
