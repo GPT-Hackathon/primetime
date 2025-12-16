@@ -1,0 +1,14 @@
+# Schema Mapping API Dependencies
+
+# Core dependencies
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+python-dotenv==1.0.0
+
+# Google Cloud dependencies
+google-cloud-bigquery>=3.13.0
+google-cloud-aiplatform>=1.38.0
+
+# Vertex AI
+vertexai>=1.38.0
