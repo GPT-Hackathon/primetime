@@ -1,11 +1,11 @@
 # Schema Mapping Agent
 
-Automatically generates schema mappings between BigQuery staging and target datasets using Google ADK and Gemini 2.0 Flash.
+Automatically generates schema mappings between BigQuery staging and target datasets using Google ADK and Gemini 2.5 Flash.
 
 ## What It Does
 
 1. **Fetches Schemas**: Reads table and column metadata from BigQuery datasets
-2. **AI Mapping**: Uses Gemini 2.0 Flash to intelligently map:
+2. **AI Mapping**: Uses Gemini 2.5 Flash to intelligently map:
    - Source tables → Target tables
    - Source columns → Target columns
    - Type conversions needed
@@ -14,6 +14,20 @@ Automatically generates schema mappings between BigQuery staging and target data
 3. **Outputs JSON**: Saves structured mapping configuration
 
 ## Quick Start
+
+### Option 1: Interactive with ADK (Recommended)
+
+```bash
+# Run as an interactive agent
+adk run agents/schema_mapping
+
+# Then chat with the agent:
+# > Generate a mapping between worldbank_staging_dataset and worldbank_target_dataset in FIX mode
+```
+
+**📖 See [QUICKSTART_ADK.md](QUICKSTART_ADK.md) for detailed ADK usage**
+
+### Option 2: Command Line Interface
 
 ```bash
 # Install dependencies (if not already installed)
@@ -24,6 +38,13 @@ python agents/schema_mapping/run_schema_mapper.py \
     --source worldbank_staging_dataset \
     --target worldbank_target_dataset \
     --output worldbank_mapping.json
+```
+
+### Option 3: Test Locally
+
+```bash
+cd agents/schema_mapping
+python test_local.py
 ```
 
 ## Configuration
@@ -158,11 +179,12 @@ python agents/schema_mapping/run_schema_mapper.py \
 
 ## Model Used
 
-**Gemini 2.0 Flash Experimental** (`gemini-2.0-flash-exp`)
+**Gemini 2.5 Flash** (`gemini-2.5-flash`)
 - Fast inference
-- Good at structured output (JSON)
+- Excellent at structured output (JSON)
 - Understands schema semantics
 - Cost-effective for repeated runs
+- Enhanced reasoning capabilities
 
 ## Troubleshooting
 
@@ -183,9 +205,14 @@ python agents/schema_mapping/run_schema_mapper.py \
 
 ## Files
 
-- `schema_mapper.py` - Core agent logic
+- `agent.py` - ADK agent definition (for `adk run`)
+- `schema_mapper.py` - Core mapping logic
 - `run_schema_mapper.py` - CLI interface
+- `api.py` - FastAPI REST API wrapper
+- `test_local.py` - Local testing script
 - `README.md` - This file
+- `README_ADK.md` - ADK integration guide
+- `QUICKSTART_ADK.md` - Quick start with ADK
 - `__init__.py` - Package exports
 
 ## Next Steps
