@@ -1,6 +1,14 @@
-flask==3.0.0
-gunicorn==21.2.0
+# Core dependencies
+google-adk>=1.0.0
+python-dotenv>=1.0.0
+
+# Google Cloud dependencies
 google-cloud-bigquery>=3.14.0
 google-cloud-aiplatform>=1.43.0
+
+# Vertex AI
 vertexai>=1.43.0
-python-dotenv>=1.0.0
+
+# API dependencies (for api.py)
+flask==3.0.0
+gunicorn==21.2.0

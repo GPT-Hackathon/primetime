@@ -7,10 +7,57 @@ from google.api_core.exceptions import NotFound
 
 def get_project_id():
     """Gets the project ID from the environment."""
-    project_id = os.environ.get("PROJECT_ID")
+    # Use consistent env var names with fallback
+    project_id = os.environ.get("GCP_PROJECT_ID") or os.environ.get("GOOGLE_CLOUD_PROJECT") or os.environ.get("PROJECT_ID")
     if not project_id:
-        raise ValueError("PROJECT_ID environment variable not set.")
+        raise ValueError("GCP_PROJECT_ID, GOOGLE_CLOUD_PROJECT, or PROJECT_ID environment variable not set.")
     return project_id
+
+def find_schema_files_in_gcs(bucket_name: str, prefix: str = "") -> str:
+    """
+    Find all schema files (files with 'schema' in the name) in a GCS bucket/folder.
+    
+    Args:
+        bucket_name: The GCS bucket name
+        prefix: Optional prefix/folder path to search in
+    
+    Returns:
+        JSON string with list of schema files found
+    """
+    try:
+        project_id = get_project_id()
+        storage_client = storage.Client(project=project_id)
+        bucket = storage_client.bucket(bucket_name)
+        
+        # List all blobs in the prefix
+        blobs = list(bucket.list_blobs(prefix=prefix))
+        
+        # Find files with "schema" in the name (case-insensitive) and ending in .json
+        schema_files = [
+            {
+                "path": blob.name,
+                "name": os.path.basename(blob.name),
+                "size_bytes": blob.size,
+                "updated": blob.updated.isoformat() if blob.updated else None
+            }
+            for blob in blobs 
+            if 'schema' in blob.name.lower() and blob.name.endswith('.json')
+        ]
+        
+        return json.dumps({
+            "status": "success",
+            "bucket": bucket_name,
+            "prefix": prefix or "/",
+            "schema_files": schema_files,
+            "count": len(schema_files)
+        }, indent=2)
+        
+    except Exception as e:
+        return json.dumps({
+            "status": "error",
+            "message": f"Error finding schema files: {str(e)}"
+        }, indent=2)
+
 
 def load_csv_to_bigquery_from_gcs(
     dataset_name: str,
@@ -58,13 +105,27 @@ def load_csv_to_bigquery_from_gcs(
         table_exists = False
         write_disposition = bigquery.WriteDisposition.WRITE_EMPTY
         
-        # Look for schema.json in the same GCS directory
-        schema_path = os.path.join(os.path.dirname(file_path), "schema.json")
+        # Look for any schema file in the same GCS directory
+        # Try multiple patterns: schema.json, *_schema.json, *schema*.json
+        directory = os.path.dirname(file_path)
         try:
             bucket = storage_client.bucket(bucket_name)
-            schema_blob = bucket.blob(schema_path)
-            if schema_blob.exists():
+            
+            # List all files in the directory
+            blobs = list(bucket.list_blobs(prefix=directory))
+            
+            # Find files with "schema" in the name (case-insensitive)
+            schema_files = [
+                blob for blob in blobs 
+                if 'schema' in blob.name.lower() and blob.name.endswith('.json')
+            ]
+            
+            if schema_files:
+                # Use the first schema file found
+                schema_blob = schema_files[0]
+                schema_path = schema_blob.name
                 print(f"Found schema file at 'gs://{bucket_name}/{schema_path}'.")
+                
                 schema_content = schema_blob.download_as_text()
                 all_schemas = json.loads(schema_content)
                 
@@ -72,14 +133,14 @@ def load_csv_to_bigquery_from_gcs(
                 if table_name in all_schemas:
                     schema_definition = all_schemas[table_name]
                     schema = [bigquery.SchemaField.from_api_repr(field) for field in schema_definition]
-                    print(f"Successfully parsed schema for table '{table_name}'.")
+                    print(f"Successfully parsed schema for table '{table_name}' from '{os.path.basename(schema_path)}'.")
                 else:
-                    print(f"Warning: Schema file found, but no entry for table '{table_name}'. "
+                    print(f"Warning: Schema file '{os.path.basename(schema_path)}' found, but no entry for table '{table_name}'. "
                           "Falling back to auto-detection.")
             else:
-                print("No 'schema.json' found. Using schema auto-detection.")
+                print(f"No schema file found in 'gs://{bucket_name}/{directory}/'. Using schema auto-detection.")
         except Exception as e:
-            print(f"Warning: Error reading or parsing schema file. Falling back to auto-detection. Error: {e}")
+            print(f"Warning: Error searching for or parsing schema file. Falling back to auto-detection. Error: {e}")
 
     # Configure the load job
     job_config = bigquery.LoadJobConfig(

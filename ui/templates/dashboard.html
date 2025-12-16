@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generic Multi-Agent ETL Pipeline</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+</head>
+<body class="bg-gray-900 text-gray-100">
+    <div x-data="dashboardApp()" x-init="init()" class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-4xl font-bold mb-2">🚀 GPT : Gen Prime Time</h1>
+        </div>
+
+        <!-- Configuration Form -->
+        <div class="bg-gray-800 rounded-lg p-6 mb-6 shadow-lg">
+            <h2 class="text-2xl font-semibold mb-4">Pipeline Configuration</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Source CSV Files</label>
+                    <input
+                        type="text"
+                        x-model="config.source_files"
+                        placeholder="dataSets/Sample-DataSet-WorldBankData/SourceSchemaData/*.csv"
+                        class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                    <p class="text-xs text-gray-400 mt-1">Supports wildcards (*.csv)</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-2">Target DDL Files</label>
+                    <input
+                        type="text"
+                        x-model="config.target_ddls"
+                        placeholder="dataSets/Sample-DataSet-WorldBankData/TargetSchema/*.sql"
+                        class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                    <p class="text-xs text-gray-400 mt-1">Supports wildcards (*.sql)</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4 mb-4">
+                <label class="block text-sm font-medium">Mode:</label>
+                <label class="flex items-center cursor-pointer">
+                    <input type="radio" x-model="config.mode" value="fix" class="mr-2">
+                    <span>Fix & Continue</span>
+                </label>
+                <label class="flex items-center cursor-pointer">
+                    <input type="radio" x-model="config.mode" value="report" class="mr-2">
+                    <span>Report Only</span>
+                </label>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+                <button
+                    @click="loadData()"
+                    :disabled="state.status === 'running' || loadState.status === 'loading'"
+                    class="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-md font-semibold transition-colors"
+                >
+                    <span x-show="loadState.status !== 'loading'">📥 Load Data</span>
+                    <span x-show="loadState.status === 'loading'">⏳ Loading...</span>
+                </button>
+
+                <button
+                    @click="runPipeline()"
+                    :disabled="state.status === 'running' || loadState.status !== 'loaded'"
+                    class="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-md font-semibold transition-colors"
+                >
+                    <span x-show="state.status !== 'running'">▶️ Run Pipeline</span>
+                    <span x-show="state.status === 'running'">⏳ Running...</span>
+                </button>
+
+                <button
+                    @click="clearState()"
+                    :disabled="state.status === 'running'"
+                    class="px-6 py-3 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-md font-semibold transition-colors"
+                >
+                    🗑️ Clear
+                </button>
+            </div>
+
+            <!-- Load Status Badge -->
+            <div x-show="loadState.status !== 'idle'" class="mt-4">
+                <span
+                    class="px-3 py-1 rounded-full text-sm font-medium"
+                    :class="{
+                        'bg-yellow-600': loadState.status === 'loading',
+                        'bg-green-600': loadState.status === 'loaded',
+                        'bg-red-600': loadState.status === 'error'
+                    }"
+                >
+                    <span x-show="loadState.status === 'loading'">⏳ Loading data into staging...</span>
+                    <span x-show="loadState.status === 'loaded'">✅ Data loaded: <span x-text="loadState.fileCount"></span> files</span>
+                    <span x-show="loadState.status === 'error'">❌ Load failed</span>
+                </span>
+            </div>
+        </div>
+
+        <!-- Load Data Results -->
+        <div x-show="loadState.status === 'loaded'" class="bg-gray-800 rounded-lg p-6 mb-6 shadow-lg">
+            <h2 class="text-2xl font-semibold mb-4">📂 Loaded Data Summary</h2>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div class="bg-gray-700 rounded-lg p-4 text-center">
+                    <div class="text-3xl font-bold text-green-400" x-text="loadState.fileCount || 0"></div>
+                    <div class="text-sm text-gray-400">Source Files</div>
+                </div>
+                <div class="bg-gray-700 rounded-lg p-4 text-center">
+                    <div class="text-3xl font-bold text-blue-400" x-text="loadState.tableCount || 0"></div>
+                    <div class="text-sm text-gray-400">Staging Tables</div>
+                </div>
+                <div class="bg-gray-700 rounded-lg p-4 text-center">
+                    <div class="text-3xl font-bold text-purple-400" x-text="loadState.rowCount || 0"></div>
+                    <div class="text-sm text-gray-400">Total Rows</div>
+                </div>
+                <div class="bg-gray-700 rounded-lg p-4 text-center">
+                    <div class="text-3xl font-bold text-cyan-400" x-text="loadState.targetCount || 0"></div>
+                    <div class="text-sm text-gray-400">Target Tables</div>
+                </div>
+            </div>
+
+            <!-- Source Tables List -->
+            <div x-show="loadState.tables && loadState.tables.length > 0">
+                <h3 class="text-lg font-semibold mb-2">Source Tables</h3>
+                <div class="flex flex-wrap gap-2">
+                    <template x-for="table in loadState.tables" :key="table.name">
+                        <button
+                            @click="previewTable(table.name)"
+                            class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-md text-sm transition-colors"
+                        >
+                            📊 <span x-text="table.name"></span>
+                            <span class="text-gray-400 text-xs" x-text="`(${table.rows} rows)`"></span>
+                        </button>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Table Preview Modal -->
+            <div x-show="previewData.show" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="previewData.show = false">
+                <div class="bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold">📊 <span x-text="previewData.tableName"></span></h3>
+                        <button @click="previewData.show = false" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+                    </div>
+                    <div class="overflow-auto flex-1">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-700 sticky top-0">
+                                <tr>
+                                    <template x-for="col in previewData.columns" :key="col">
+                                        <th class="px-3 py-2 text-left" x-text="col"></th>
+                                    </template>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="(row, idx) in previewData.rows" :key="idx">
+                                    <tr class="border-b border-gray-700 hover:bg-gray-700">
+                                        <template x-for="col in previewData.columns" :key="col">
+                                            <td class="px-3 py-2" x-text="row[col]"></td>
+                                        </template>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-4 flex justify-between items-center text-sm text-gray-400">
+                        <span>Showing <span x-text="previewData.rows.length"></span> of <span x-text="previewData.totalRows"></span> rows</span>
+                        <div class="flex gap-2">
+                            <button
+                                @click="loadPreviewPage(previewData.page - 1)"
+                                :disabled="previewData.page <= 1"
+                                class="px-3 py-1 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-600 rounded"
+                            >← Prev</button>
+                            <span class="px-3 py-1">Page <span x-text="previewData.page"></span></span>
+                            <button
+                                @click="loadPreviewPage(previewData.page + 1)"
+                                :disabled="previewData.rows.length < previewData.pageSize"
+                                class="px-3 py-1 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-600 rounded"
+                            >Next →</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div x-show="state.status === 'running' || state.status === 'completed'" class="bg-gray-800 rounded-lg p-6 mb-6 shadow-lg">
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="text-lg font-semibold">Progress</h3>
+                <span class="text-sm" x-text="state.current_step"></span>
+            </div>
+
+            <div class="w-full bg-gray-700 rounded-full h-4 mb-2">
+                <div
+                    class="bg-blue-600 h-4 rounded-full transition-all duration-500"
+                    :style="`width: ${state.progress}%`"
+                ></div>
+            </div>
+
+            <div class="flex justify-between text-sm text-gray-400">
+                <span x-text="`${state.progress}%`"></span>
+                <span x-show="state.status === 'completed'" class="text-green-400">✅ Complete!</span>
+                <span x-show="state.status === 'error'" class="text-red-400">❌ Error</span>
+            </div>
+        </div>
+
+        <!-- Results Summary -->
+        <div x-show="state.status === 'completed' && state.results" class="bg-gray-800 rounded-lg p-6 mb-6 shadow-lg">
+            <h2 class="text-2xl font-semibold mb-4">📊 Pipeline Results</h2>
+
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div class="bg-gray-700 rounded-lg p-4 text-center">
+                    <div class="text-3xl font-bold text-blue-400" x-text="state.results.source_files || 0"></div>
+                    <div class="text-sm text-gray-400">Source Files</div>
+                </div>
+
+                <div class="bg-gray-700 rounded-lg p-4 text-center">
+                    <div class="text-3xl font-bold text-green-400" x-text="state.results.target_tables || 0"></div>
+                    <div class="text-sm text-gray-400">Target Tables</div>
+                </div>
+
+                <div class="bg-gray-700 rounded-lg p-4 text-center">
+                    <div class="text-3xl font-bold text-purple-400" x-text="state.results.mappings || 0"></div>
+                    <div class="text-sm text-gray-400">Mappings</div>
+                </div>
+
+                <div class="bg-gray-700 rounded-lg p-4 text-center">
+                    <div class="text-3xl font-bold text-yellow-400" x-text="state.results.issues_found || 0"></div>
+                    <div class="text-sm text-gray-400">Issues Found</div>
+                </div>
+
+                <div class="bg-gray-700 rounded-lg p-4 text-center">
+                    <div class="text-3xl font-bold text-cyan-400" x-text="state.results.sql_files || 0"></div>
+                    <div class="text-sm text-gray-400">SQL Files</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Logs -->
+        <div class="bg-gray-800 rounded-lg p-6 shadow-lg">
+            <h2 class="text-2xl font-semibold mb-4">📝 Live Logs</h2>
+
+            <div class="bg-gray-900 rounded-md p-4 h-96 overflow-y-auto font-mono text-sm">
+                <template x-for="log in logs" :key="log.timestamp">
+                    <div
+                        class="mb-1"
+                        :class="{
+                            'text-green-400': log.level === 'success',
+                            'text-red-400': log.level === 'error',
+                            'text-blue-400': log.level === 'info',
+                            'text-yellow-400': log.level === 'warning'
+                        }"
+                    >
+                        <span class="text-gray-500" x-text="`[${log.timestamp}]`"></span>
+                        <span x-text="log.message"></span>
+                    </div>
+                </template>
+
+                <div x-show="logs.length === 0" class="text-gray-500 text-center py-8">
+                    No logs yet. Click "Run Pipeline" to start.
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-8 text-center text-gray-500 text-sm">
+            <p>Built with Google Agent Developer Kit (ADK) + Vertex AI Gemini 1.5 Pro</p>
+            <p class="mt-1">Works with ANY data - No hardcoding required! 🎉</p>
+        </div>
+    </div>
+
+    <script>
+        function dashboardApp() {
+            return {
+                config: {
+                    source_files: 'dataSets/Sample-DataSet-WorldBankData/SourceSchemaData/*.csv',
+                    target_ddls: 'dataSets/Sample-DataSet-WorldBankData/TargetSchema/*.sql',
+                    mode: 'fix'
+                },
+                state: {
+                    status: 'idle',
+                    current_step: null,
+                    progress: 0,
+                    results: {},
+                    start_time: null,
+                    end_time: null
+                },
+                loadState: {
+                    status: 'idle',  // idle, loading, loaded, error
+                    fileCount: 0,
+                    tableCount: 0,
+                    rowCount: 0,
+                    targetCount: 0,
+                    tables: []
+                },
+                previewData: {
+                    show: false,
+                    tableName: '',
+                    columns: [],
+                    rows: [],
+                    totalRows: 0,
+                    page: 1,
+                    pageSize: 25
+                },
+                logs: [],
+                eventSource: null,
+
+                init() {
+                    this.fetchStatus();
+                    this.connectEventStream();
+                },
+
+                async fetchStatus() {
+                    try {
+                        const response = await fetch('/api/status');
+                        const data = await response.json();
+                        this.state = data;
+                        this.logs = data.logs || [];
+                    } catch (error) {
+                        console.error('Failed to fetch status:', error);
+                    }
+                },
+
+                connectEventStream() {
+                    this.eventSource = new EventSource('/api/stream');
+
+                    this.eventSource.onmessage = (event) => {
+                        try {
+                            const data = JSON.parse(event.data);
+                            if (!data.heartbeat) {
+                                this.logs.push(data);
+                                // Auto-scroll to bottom
+                                setTimeout(() => {
+                                    const logContainer = document.querySelector('.overflow-y-auto');
+                                    if (logContainer) {
+                                        logContainer.scrollTop = logContainer.scrollHeight;
+                                    }
+                                }, 100);
+                            }
+                        } catch (error) {
+                            console.error('Failed to parse event:', error);
+                        }
+                    };
+
+                    this.eventSource.onerror = (error) => {
+                        console.error('EventSource error:', error);
+                    };
+
+                    // Poll status every 2 seconds
+                    setInterval(() => {
+                        if (this.state.status === 'running') {
+                            this.fetchStatus();
+                        }
+                    }, 2000);
+                },
+
+                async runPipeline() {
+                    try {
+                        const response = await fetch('/api/run', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                source_files: [this.config.source_files],
+                                target_ddls: [this.config.target_ddls],
+                                mode: this.config.mode
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            this.logs = [];
+                            this.state.status = 'running';
+                            this.state.progress = 0;
+                        } else {
+                            alert(`Error: ${data.error}`);
+                        }
+                    } catch (error) {
+                        console.error('Failed to run pipeline:', error);
+                        alert('Failed to start pipeline');
+                    }
+                },
+
+                async clearState() {
+                    try {
+                        await fetch('/api/clear');
+                        this.logs = [];
+                        this.state = {
+                            status: 'idle',
+                            current_step: null,
+                            progress: 0,
+                            results: {},
+                            start_time: null,
+                            end_time: null
+                        };
+                        this.loadState = {
+                            status: 'idle',
+                            fileCount: 0,
+                            tableCount: 0,
+                            rowCount: 0,
+                            targetCount: 0,
+                            tables: []
+                        };
+                        this.previewData = {
+                            show: false,
+                            tableName: '',
+                            columns: [],
+                            rows: [],
+                            totalRows: 0,
+                            page: 1,
+                            pageSize: 25
+                        };
+                    } catch (error) {
+                        console.error('Failed to clear state:', error);
+                    }
+                },
+
+                async loadData() {
+                    try {
+                        this.loadState.status = 'loading';
+                        this.logs.push({
+                            timestamp: new Date().toLocaleTimeString(),
+                            level: 'info',
+                            message: '📥 Starting data load into staging tables...'
+                        });
+
+                        const response = await fetch('/api/load', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                source_files: this.config.source_files,
+                                target_ddls: this.config.target_ddls
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            this.loadState.status = 'loaded';
+                            this.loadState.fileCount = data.file_count || 0;
+                            this.loadState.tableCount = data.table_count || 0;
+                            this.loadState.rowCount = data.row_count || 0;
+                            this.loadState.targetCount = data.target_count || 0;
+                            this.loadState.tables = data.tables || [];
+
+                            this.logs.push({
+                                timestamp: new Date().toLocaleTimeString(),
+                                level: 'success',
+                                message: `✅ Data loaded: ${data.file_count} files, ${data.row_count} rows`
+                            });
+                        } else {
+                            this.loadState.status = 'error';
+                            this.logs.push({
+                                timestamp: new Date().toLocaleTimeString(),
+                                level: 'error',
+                                message: `❌ Load failed: ${data.error}`
+                            });
+                        }
+                    } catch (error) {
+                        this.loadState.status = 'error';
+                        this.logs.push({
+                            timestamp: new Date().toLocaleTimeString(),
+                            level: 'error',
+                            message: `❌ Load failed: ${error.message}`
+                        });
+                    }
+                },
+
+                async previewTable(tableName) {
+                    this.previewData.tableName = tableName;
+                    this.previewData.page = 1;
+                    this.previewData.show = true;
+                    await this.loadPreviewPage(1);
+                },
+
+                async loadPreviewPage(page) {
+                    if (page < 1) return;
+
+                    try {
+                        const response = await fetch(`/api/preview/${this.previewData.tableName}?page=${page}&page_size=${this.previewData.pageSize}`);
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            this.previewData.columns = data.columns || [];
+                            this.previewData.rows = data.rows || [];
+                            this.previewData.totalRows = data.total_rows || 0;
+                            this.previewData.page = page;
+                        }
+                    } catch (error) {
+                        console.error('Failed to load preview:', error);
+                    }
+                }
+            };
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generic Multi-Agent ETL Pipeline v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+</head>
+<body class="bg-gray-900 text-gray-100">
+    <div x-data="dashboardApp()" x-init="init()" class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-4xl font-bold mb-2">🚀 Generic Multi-Agent ETL Pipeline v2</h1>
+            <p class="text-gray-400">Works with ANY file type in ANY folder - Zero hardcoding!</p>
+        </div>
+
+        <!-- Configuration Form -->
+        <div class="bg-gray-800 rounded-lg p-6 mb-6 shadow-lg">
+            <h2 class="text-2xl font-semibold mb-4">Pipeline Configuration</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Source Folder</label>
+                    <input
+                        type="text"
+                        x-model="config.source_folder"
+                        placeholder="Sample-DataSet-WorldBankData/SourceSchemaData"
+                        class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                    <p class="text-xs text-gray-400 mt-1">Path to folder containing source data files</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-2">Target Folder</label>
+                    <input
+                        type="text"
+                        x-model="config.target_folder"
+                        placeholder="Sample-DataSet-WorldBankData/TargetSchema"
+                        class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                    <p class="text-xs text-gray-400 mt-1">Path to folder containing target schema files (DDL)</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4 mb-4">
+                <label class="block text-sm font-medium">Mode:</label>
+                <label class="flex items-center cursor-pointer">
+                    <input type="radio" x-model="config.mode" value="fix" class="mr-2">
+                    <span>Fix & Continue</span>
+                </label>
+                <label class="flex items-center cursor-pointer">
+                    <input type="radio" x-model="config.mode" value="report" class="mr-2">
+                    <span>Report Only</span>
+                </label>
+            </div>
+
+            <div class="flex gap-2">
+                <button
+                    @click="runPipeline()"
+                    :disabled="state.status === 'running'"
+                    class="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-md font-semibold transition-colors"
+                >
+                    <span x-show="state.status !== 'running'">▶️ Run Pipeline</span>
+                    <span x-show="state.status === 'running'">⏳ Running...</span>
+                </button>
+
+                <button
+                    @click="clearState()"
+                    :disabled="state.status === 'running'"
+                    class="px-6 py-3 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-md font-semibold transition-colors"
+                >
+                    🗑️ Clear
+                </button>
+            </div>
+        </div>
+
+        <!-- Error Display (if any) -->
+        <div x-show="state.error" class="bg-red-900 border border-red-700 rounded-lg p-6 mb-6 shadow-lg">
+            <h3 class="text-xl font-semibold text-red-300 mb-2">❌ Error</h3>
+            <p class="text-red-200 whitespace-pre-wrap" x-text="state.error"></p>
+        </div>
+
+        <!-- Progress Bar -->
+        <div x-show="state.status === 'running' || state.status === 'completed'" class="bg-gray-800 rounded-lg p-6 mb-6 shadow-lg">
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="text-lg font-semibold">Progress</h3>
+                <span class="text-sm" x-text="state.current_step"></span>
+            </div>
+
+            <div class="w-full bg-gray-700 rounded-full h-4 mb-2">
+                <div
+                    class="bg-blue-600 h-4 rounded-full transition-all duration-500"
+                    :style="`width: ${state.progress}%`"
+                ></div>
+            </div>
+
+            <div class="flex justify-between text-sm text-gray-400">
+                <span x-text="`${state.progress}%`"></span>
+                <span x-show="state.status === 'completed'" class="text-green-400">✅ Complete!</span>
+                <span x-show="state.status === 'error'" class="text-red-400">❌ Error</span>
+            </div>
+        </div>
+
+        <!-- Results Summary -->
+        <div x-show="state.status === 'completed' && state.results" class="bg-gray-800 rounded-lg p-6 mb-6 shadow-lg">
+            <h2 class="text-2xl font-semibold mb-4">📊 Pipeline Results</h2>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-gray-700 rounded-lg p-4 text-center">
+                    <div class="text-3xl font-bold text-blue-400" x-text="state.results.source_files || 0"></div>
+                    <div class="text-sm text-gray-400">Source Files</div>
+                </div>
+
+                <div class="bg-gray-700 rounded-lg p-4 text-center">
+                    <div class="text-3xl font-bold text-green-400" x-text="state.results.target_schemas || 0"></div>
+                    <div class="text-sm text-gray-400">Target Schemas</div>
+                </div>
+
+                <div class="bg-gray-700 rounded-lg p-4 text-center">
+                    <div class="text-3xl font-bold text-purple-400" x-text="state.results.mappings || 0"></div>
+                    <div class="text-sm text-gray-400">Mappings</div>
+                </div>
+
+                <div class="bg-gray-700 rounded-lg p-4 text-center">
+                    <div class="text-3xl font-bold text-yellow-400" x-text="state.results.issues_found || 0"></div>
+                    <div class="text-sm text-gray-400">Issues Found</div>
+                </div>
+            </div>
+
+            <div class="mt-4 bg-gray-700 rounded-lg p-4">
+                <div class="text-sm text-gray-400">Mode: <span class="font-semibold text-white" x-text="state.results.mode"></span></div>
+            </div>
+        </div>
+
+        <!-- Live Logs -->
+        <div class="bg-gray-800 rounded-lg p-6 shadow-lg">
+            <h2 class="text-2xl font-semibold mb-4">📝 Live Logs</h2>
+
+            <div id="log-container" class="bg-gray-900 rounded-md p-4 h-96 overflow-y-auto font-mono text-sm">
+                <template x-for="log in logs" :key="log.timestamp">
+                    <div
+                        class="mb-1"
+                        :class="{
+                            'text-green-400': log.level === 'success',
+                            'text-red-400': log.level === 'error',
+                            'text-blue-400': log.level === 'info',
+                            'text-yellow-400': log.level === 'warning'
+                        }"
+                    >
+                        <span class="text-gray-500" x-text="`[${log.timestamp}]`"></span>
+                        <span x-text="log.message"></span>
+                    </div>
+                </template>
+
+                <div x-show="logs.length === 0" class="text-gray-500 text-center py-8">
+                    No logs yet. Click "Run Pipeline" to start.
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-8 text-center text-gray-500 text-sm">
+            <p>Built with Google Agent Developer Kit (ADK) + Vertex AI Gemini 1.5 Pro</p>
+            <p class="mt-1">Works with ANY data - CSV, JSON, Parquet, Excel, SQL, YAML, XML! 🎉</p>
+        </div>
+    </div>
+
+    <script>
+        function dashboardApp() {
+            return {
+                config: {
+                    source_folder: 'Sample-DataSet-WorldBankData/SourceSchemaData',
+                    target_folder: 'Sample-DataSet-WorldBankData/TargetSchema',
+                    mode: 'fix'
+                },
+                state: {
+                    status: 'idle',
+                    current_step: null,
+                    progress: 0,
+                    results: {},
+                    error: null,
+                    start_time: null,
+                    end_time: null
+                },
+                logs: [],
+                eventSource: null,
+
+                init() {
+                    this.fetchStatus();
+                    this.connectEventStream();
+                },
+
+                async fetchStatus() {
+                    try {
+                        const response = await fetch('/api/status');
+                        const data = await response.json();
+                        this.state = data;
+                        this.logs = data.logs || [];
+                    } catch (error) {
+                        console.error('Failed to fetch status:', error);
+                    }
+                },
+
+                connectEventStream() {
+                    this.eventSource = new EventSource('/api/stream');
+
+                    this.eventSource.onmessage = (event) => {
+                        try {
+                            const data = JSON.parse(event.data);
+                            if (!data.heartbeat) {
+                                this.logs.push(data);
+                                // Auto-scroll to bottom
+                                setTimeout(() => {
+                                    const logContainer = document.getElementById('log-container');
+                                    if (logContainer) {
+                                        logContainer.scrollTop = logContainer.scrollHeight;
+                                    }
+                                }, 100);
+                            }
+                        } catch (error) {
+                            console.error('Failed to parse event:', error);
+                        }
+                    };
+
+                    this.eventSource.onerror = (error) => {
+                        console.error('EventSource error:', error);
+                    };
+
+                    // Poll status every 2 seconds when running
+                    setInterval(() => {
+                        if (this.state.status === 'running') {
+                            this.fetchStatus();
+                        }
+                    }, 2000);
+                },
+
+                async runPipeline() {
+                    if (!this.config.source_folder || !this.config.target_folder) {
+                        alert('Please specify both source folder and target folder');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch('/api/run', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                source_folder: this.config.source_folder,
+                                target_folder: this.config.target_folder,
+                                mode: this.config.mode
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            this.logs = [];
+                            this.state.status = 'running';
+                            this.state.progress = 0;
+                            this.state.error = null;
+                        } else {
+                            this.state.error = data.error || 'Unknown error occurred';
+                            alert(`Error: ${data.error}`);
+                        }
+                    } catch (error) {
+                        console.error('Failed to run pipeline:', error);
+                        this.state.error = `Failed to start pipeline: ${error.message}`;
+                        alert('Failed to start pipeline. Check console for details.');
+                    }
+                },
+
+                async clearState() {
+                    try {
+                        await fetch('/api/clear');
+                        this.logs = [];
+                        this.state = {
+                            status: 'idle',
+                            current_step: null,
+                            progress: 0,
+                            results: {},
+                            error: null,
+                            start_time: null,
+                            end_time: null
+                        };
+                    } catch (error) {
+                        console.error('Failed to clear state:', error);
+                    }
+                }
+            };
+        }
+    </script>
+</body>
+</html>

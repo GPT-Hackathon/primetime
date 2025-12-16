@@ -408,10 +408,11 @@ def validate_schema_mapping(
     global project_id, bq_client
 
     # Initialize BigQuery client with project ID from environment
+    # Use fallback logic for compatibility with different env var names
     if project_id is None:
-        project_id = os.getenv("GCP_PROJECT_ID")
+        project_id = os.getenv("GCP_PROJECT_ID", os.getenv("GOOGLE_CLOUD_PROJECT"))
         if not project_id:
-            return {"status": "error", "message": "GCP_PROJECT_ID environment variable not set"}
+            return {"status": "error", "message": "GCP_PROJECT_ID or GOOGLE_CLOUD_PROJECT environment variable not set"}
 
     if bq_client is None:
         bq_client = bigquery.Client(project=project_id)
