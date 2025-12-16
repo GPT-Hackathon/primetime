@@ -1,0 +1,948 @@
+{
+  "status": "success",
+  "message": null,
+  "mapping": {
+    "metadata": {
+      "source_dataset": "ccibt-hack25ww7-750.worldbank_staging_dataset",
+      "target_dataset": "ccibt-hack25ww7-750.worldbank_target_dataset",
+      "generated_at": "2025-12-16T00:00:00Z",
+      "confidence": "high",
+      "mode": "REPORT"
+    },
+    "mappings": [
+      {
+        "source_table": "ccibt-hack25ww7-750.worldbank_staging_dataset.staging_countries",
+        "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.dim_country",
+        "match_confidence": 0.95,
+        "column_mappings": [
+          {
+            "source_column": "country_code",
+            "target_column": "country_key",
+            "source_type": "STRING",
+            "target_type": "STRING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "Direct mapping from source country_code to target country_key"
+          },
+          {
+            "source_column": "country_name",
+            "target_column": "country_name",
+            "source_type": "STRING",
+            "target_type": "STRING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "Direct mapping"
+          },
+          {
+            "source_column": "iso3",
+            "target_column": "iso3",
+            "source_type": "STRING",
+            "target_type": "STRING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "Direct mapping"
+          },
+          {
+            "source_column": "region",
+            "target_column": "region",
+            "source_type": "STRING",
+            "target_type": "STRING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "Direct mapping"
+          },
+          {
+            "source_column": "income_group",
+            "target_column": "income_group",
+            "source_type": "STRING",
+            "target_type": "STRING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "Direct mapping"
+          }
+        ],
+        "unmapped_source_columns": [],
+        "unmapped_target_columns": [],
+        "mapping_errors": [],
+        "validation_rules": [
+          {
+            "column": "country_key",
+            "type": "NOT_NULL",
+            "reason": "Target column is REQUIRED"
+          },
+          {
+            "column": "country_key",
+            "type": "UNIQUE",
+            "reason": "Expected to be the primary key for the dimension table"
+          }
+        ],
+        "primary_key": [
+          "country_key"
+        ],
+        "uniqueness_constraints": [
+          "country_key"
+        ]
+      },
+      {
+        "source_table": "ccibt-hack25ww7-750.worldbank_staging_dataset.staging_indicators_meta",
+        "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.dim_indicator",
+        "match_confidence": 0.95,
+        "column_mappings": [
+          {
+            "source_column": "indicator_code",
+            "target_column": "indicator_code",
+            "source_type": "STRING",
+            "target_type": "STRING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "Direct mapping"
+          },
+          {
+            "source_column": "indicator_name",
+            "target_column": "indicator_name",
+            "source_type": "STRING",
+            "target_type": "STRING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "Direct mapping"
+          },
+          {
+            "source_column": "topic",
+            "target_column": "topic",
+            "source_type": "STRING",
+            "target_type": "STRING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "Direct mapping"
+          }
+        ],
+        "unmapped_source_columns": [],
+        "unmapped_target_columns": [],
+        "mapping_errors": [],
+        "validation_rules": [
+          {
+            "column": "indicator_code",
+            "type": "NOT_NULL",
+            "reason": "Target column is REQUIRED"
+          },
+          {
+            "column": "indicator_code",
+            "type": "UNIQUE",
+            "reason": "Expected to be the primary key for the dimension table"
+          }
+        ],
+        "primary_key": [
+          "indicator_code"
+        ],
+        "uniqueness_constraints": [
+          "indicator_code"
+        ]
+      },
+      {
+        "source_table": "ccibt-hack25ww7-750.worldbank_staging_dataset.staging_gdp, ccibt-hack25ww7-750.worldbank_staging_dataset.staging_population, ccibt-hack25ww7-750.worldbank_staging_dataset.staging_co2_emissions, ccibt-hack25ww7-750.worldbank_staging_dataset.staging_life_expectancy, ccibt-hack25ww7-750.worldbank_staging_dataset.staging_poverty_headcount, ccibt-hack25ww7-750.worldbank_staging_dataset.staging_primary_enrollment",
+        "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.dim_time",
+        "match_confidence": 0.8,
+        "column_mappings": [
+          {
+            "source_column": "year",
+            "target_column": "year",
+            "source_type": "INTEGER",
+            "target_type": "INTEGER",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "Year extracted from various indicator tables"
+          },
+          {
+            "source_column": "year",
+            "target_column": "year_key",
+            "source_type": "INTEGER",
+            "target_type": "STRING",
+            "type_conversion_needed": true,
+            "transformation": "CAST(year AS STRING)",
+            "notes": "Casting year integer to string for year_key"
+          }
+        ],
+        "unmapped_source_columns": [],
+        "unmapped_target_columns": [],
+        "mapping_errors": [],
+        "validation_rules": [
+          {
+            "column": "year",
+            "type": "NOT_NULL",
+            "reason": "Target column is REQUIRED"
+          },
+          {
+            "column": "year",
+            "type": "UNIQUE",
+            "reason": "Expected to be the primary key for the dimension table"
+          },
+          {
+            "column": "year",
+            "type": "RANGE",
+            "value": "1900-2100",
+            "reason": "Typical range for historical and projected data"
+          }
+        ],
+        "primary_key": [
+          "year"
+        ],
+        "uniqueness_constraints": [
+          "year"
+        ]
+      },
+      {
+        "source_table": "ccibt-hack25ww7-750.worldbank_staging_dataset.staging_co2_emissions, ccibt-hack25ww7-750.worldbank_staging_dataset.staging_gdp, ccibt-hack25ww7-750.worldbank_staging_dataset.staging_life_expectancy, ccibt-hack25ww7-750.worldbank_staging_dataset.staging_population, ccibt-hack25ww7-750.worldbank_staging_dataset.staging_poverty_headcount, ccibt-hack25ww7-750.worldbank_staging_dataset.staging_primary_enrollment",
+        "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.fact_indicator_values",
+        "match_confidence": 0.9,
+        "column_mappings": [
+          {
+            "source_column": "country_code",
+            "target_column": "country_key",
+            "source_type": "STRING",
+            "target_type": "STRING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "Direct mapping from country_code in staging tables"
+          },
+          {
+            "source_column": "year",
+            "target_column": "year",
+            "source_type": "INTEGER",
+            "target_type": "INTEGER",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "Direct mapping from year in staging tables"
+          },
+          {
+            "source_column": "indicator_code",
+            "target_column": "indicator_code",
+            "source_type": "STRING",
+            "target_type": "STRING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "Direct mapping from indicator_code in staging tables"
+          },
+          {
+            "source_column": "value",
+            "target_column": "numeric_value",
+            "source_type": "INTEGER/FLOAT",
+            "target_type": "NUMERIC",
+            "type_conversion_needed": true,
+            "transformation": "CAST(value AS NUMERIC)",
+            "notes": "Casting source 'value' to target 'NUMERIC'"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "data_source",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "loaded_at",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          }
+        ],
+        "unmapped_source_columns": [],
+        "unmapped_target_columns": [
+          "data_source",
+          "loaded_at"
+        ],
+        "mapping_errors": [
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "data_source",
+            "severity": "WARNING",
+            "message": "Target column 'data_source' in 'fact_indicator_values' has no direct source. Consider adding a default value or transformation."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "loaded_at",
+            "severity": "WARNING",
+            "message": "Target column 'loaded_at' in 'fact_indicator_values' has no direct source. Consider adding a default value or transformation."
+          }
+        ],
+        "validation_rules": [
+          {
+            "column": "country_key",
+            "type": "NOT_NULL",
+            "reason": "Generally good practice for fact table foreign keys"
+          },
+          {
+            "column": "year",
+            "type": "NOT_NULL",
+            "reason": "Generally good practice for fact table foreign keys"
+          },
+          {
+            "column": "indicator_code",
+            "type": "NOT_NULL",
+            "reason": "Generally good practice for fact table foreign keys"
+          }
+        ],
+        "primary_key": [
+          "country_key",
+          "year",
+          "indicator_code"
+        ],
+        "uniqueness_constraints": [
+          "country_key",
+          "year",
+          "indicator_code"
+        ]
+      },
+      {
+        "source_table": "ccibt-hack25ww7-750.worldbank_staging_dataset.staging_gdp, ccibt-hack25ww7-750.worldbank_staging_dataset.staging_population, ccibt-hack25ww7-750.worldbank_staging_dataset.staging_life_expectancy, ccibt-hack25ww7-750.worldbank_staging_dataset.staging_co2_emissions, ccibt-hack25ww7-750.worldbank_staging_dataset.staging_primary_enrollment, ccibt-hack25ww7-750.worldbank_staging_dataset.staging_poverty_headcount",
+        "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.agg_country_year",
+        "match_confidence": 0.85,
+        "column_mappings": [
+          {
+            "source_column": "country_code",
+            "target_column": "country_key",
+            "source_type": "STRING",
+            "target_type": "STRING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "Mapping country_code from various staging tables to country_key"
+          },
+          {
+            "source_column": "year",
+            "target_column": "year",
+            "source_type": "INTEGER",
+            "target_type": "INTEGER",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "Mapping year from various staging tables"
+          },
+          {
+            "source_column": "value (from staging_gdp)",
+            "target_column": "gdp",
+            "source_type": "INTEGER",
+            "target_type": "NUMERIC",
+            "type_conversion_needed": true,
+            "transformation": "CAST(value AS NUMERIC) WHERE indicator_code = 'NY.GDP.MKTP.CD'",
+            "notes": "Extracting GDP value and casting to NUMERIC"
+          },
+          {
+            "source_column": "value (from staging_population)",
+            "target_column": "population",
+            "source_type": "INTEGER",
+            "target_type": "INTEGER",
+            "type_conversion_needed": false,
+            "transformation": "value WHERE indicator_code = 'SP.POP.TOTL'",
+            "notes": "Extracting population value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "gdp_per_capita",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No direct source column. Requires transformation: gdp / population. Needs manual mapping or default value."
+          },
+          {
+            "source_column": "value (from staging_life_expectancy)",
+            "target_column": "life_expectancy",
+            "source_type": "FLOAT",
+            "target_type": "FLOAT",
+            "type_conversion_needed": false,
+            "transformation": "value WHERE indicator_code = 'SP.DYN.LE00.IN'",
+            "notes": "Extracting life expectancy value"
+          },
+          {
+            "source_column": "value (from staging_co2_emissions)",
+            "target_column": "co2_emissions",
+            "source_type": "INTEGER",
+            "target_type": "INTEGER",
+            "type_conversion_needed": false,
+            "transformation": "value WHERE indicator_code = 'EN.ATM.CO2E.KT'",
+            "notes": "Extracting CO2 emissions value"
+          },
+          {
+            "source_column": "value (from staging_primary_enrollment)",
+            "target_column": "primary_enrollment",
+            "source_type": "FLOAT",
+            "target_type": "FLOAT",
+            "type_conversion_needed": false,
+            "transformation": "value WHERE indicator_code = 'SE.PRM.ENRR'",
+            "notes": "Extracting primary enrollment value"
+          },
+          {
+            "source_column": "value (from staging_poverty_headcount)",
+            "target_column": "poverty_headcount",
+            "source_type": "FLOAT",
+            "target_type": "FLOAT",
+            "type_conversion_needed": false,
+            "transformation": "value WHERE indicator_code = 'SI.POV.NAHC'",
+            "notes": "Extracting poverty headcount value"
+          }
+        ],
+        "unmapped_source_columns": [],
+        "unmapped_target_columns": [
+          "gdp_per_capita"
+        ],
+        "mapping_errors": [
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "gdp_per_capita",
+            "severity": "WARNING",
+            "message": "Target column 'gdp_per_capita' in 'agg_country_year' has no direct source. Requires calculation (GDP / Population). Needs manual mapping or default value."
+          }
+        ],
+        "validation_rules": [
+          {
+            "column": "country_key",
+            "type": "NOT_NULL",
+            "reason": "Generally good practice for aggregated fact table foreign keys"
+          },
+          {
+            "column": "year",
+            "type": "NOT_NULL",
+            "reason": "Generally good practice for aggregated fact table foreign keys"
+          },
+          {
+            "column": "gdp",
+            "type": "NUMERIC_VALUE",
+            "reason": "Ensures numeric integrity for GDP"
+          },
+          {
+            "column": "population",
+            "type": "NUMERIC_VALUE",
+            "reason": "Ensures numeric integrity for Population"
+          },
+          {
+            "column": "gdp_per_capita",
+            "type": "NUMERIC_VALUE",
+            "reason": "Ensures numeric integrity for calculated GDP per capita"
+          },
+          {
+            "column": "life_expectancy",
+            "type": "NUMERIC_VALUE",
+            "reason": "Ensures numeric integrity for Life Expectancy"
+          },
+          {
+            "column": "co2_emissions",
+            "type": "NUMERIC_VALUE",
+            "reason": "Ensures numeric integrity for CO2 Emissions"
+          },
+          {
+            "column": "primary_enrollment",
+            "type": "NUMERIC_VALUE",
+            "reason": "Ensures numeric integrity for Primary Enrollment"
+          },
+          {
+            "column": "poverty_headcount",
+            "type": "NUMERIC_VALUE",
+            "reason": "Ensures numeric integrity for Poverty Headcount"
+          }
+        ],
+        "primary_key": [
+          "country_key",
+          "year"
+        ],
+        "uniqueness_constraints": [
+          "country_key",
+          "year"
+        ]
+      },
+      {
+        "source_table": "NO_MATCHING_SOURCE_TABLES",
+        "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.fact_loan_snapshot",
+        "match_confidence": 0,
+        "column_mappings": [
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "loan_id",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "borrower_id",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "facility_id",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "snapshot_date_key",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "snapshot_date",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "outstanding_principal",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "current_rate_pct",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "margin_bps",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "rating_grade",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "score",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          }
+        ],
+        "unmapped_source_columns": [],
+        "unmapped_target_columns": [
+          "loan_id",
+          "borrower_id",
+          "facility_id",
+          "snapshot_date_key",
+          "snapshot_date",
+          "outstanding_principal",
+          "current_rate_pct",
+          "margin_bps",
+          "rating_grade",
+          "score"
+        ],
+        "mapping_errors": [
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "loan_id",
+            "severity": "WARNING",
+            "message": "Target column 'loan_id' in 'fact_loan_snapshot' has no direct source. Requires manual mapping or default value."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "borrower_id",
+            "severity": "WARNING",
+            "message": "Target column 'borrower_id' in 'fact_loan_snapshot' has no direct source. Requires manual mapping or default value."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "facility_id",
+            "severity": "WARNING",
+            "message": "Target column 'facility_id' in 'fact_loan_snapshot' has no direct source. Requires manual mapping or default value."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "snapshot_date_key",
+            "severity": "WARNING",
+            "message": "Target column 'snapshot_date_key' in 'fact_loan_snapshot' has no direct source. Requires manual mapping or default value."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "snapshot_date",
+            "severity": "WARNING",
+            "message": "Target column 'snapshot_date' in 'fact_loan_snapshot' has no direct source. Requires manual mapping or default value."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "outstanding_principal",
+            "severity": "WARNING",
+            "message": "Target column 'outstanding_principal' in 'fact_loan_snapshot' has no direct source. Requires manual mapping or default value."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "current_rate_pct",
+            "severity": "WARNING",
+            "message": "Target column 'current_rate_pct' in 'fact_loan_snapshot' has no direct source. Requires manual mapping or default value."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "margin_bps",
+            "severity": "WARNING",
+            "message": "Target column 'margin_bps' in 'fact_loan_snapshot' has no direct source. Requires manual mapping or default value."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "rating_grade",
+            "severity": "WARNING",
+            "message": "Target column 'rating_grade' in 'fact_loan_snapshot' has no direct source. Requires manual mapping or default value."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "score",
+            "severity": "WARNING",
+            "message": "Target column 'score' in 'fact_loan_snapshot' has no direct source. Requires manual mapping or default value."
+          }
+        ],
+        "validation_rules": [
+          {
+            "column": "snapshot_date",
+            "type": "DATE_FORMAT",
+            "reason": "Ensures date column has a valid format"
+          },
+          {
+            "column": "outstanding_principal",
+            "type": "NUMERIC_VALUE",
+            "reason": "Ensures numeric integrity"
+          },
+          {
+            "column": "current_rate_pct",
+            "type": "NUMERIC_VALUE",
+            "reason": "Ensures numeric integrity"
+          },
+          {
+            "column": "score",
+            "type": "NUMERIC_VALUE",
+            "reason": "Ensures numeric integrity"
+          }
+        ],
+        "primary_key": [],
+        "uniqueness_constraints": []
+      },
+      {
+        "source_table": "NO_MATCHING_SOURCE_TABLES",
+        "target_table": "ccibt-hack25ww7-750.worldbank_target_dataset.fact_payments",
+        "match_confidence": 0,
+        "column_mappings": [
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "payment_id",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "date_key",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "payment_date",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "loan_id",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "borrower_id",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "facility_id",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "index_id",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "index_name",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "tenor_months",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "payment_amount",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "principal_component",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "interest_component",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "fee_component",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "days_past_due",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "currency",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "payment_method",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          },
+          {
+            "source_column": "UNMAPPED",
+            "target_column": "margin_bps",
+            "source_type": "MISSING",
+            "type_conversion_needed": false,
+            "transformation": null,
+            "notes": "No source column found - requires manual mapping or default value"
+          }
+        ],
+        "unmapped_source_columns": [],
+        "unmapped_target_columns": [
+          "payment_id",
+          "date_key",
+          "payment_date",
+          "loan_id",
+          "borrower_id",
+          "facility_id",
+          "index_id",
+          "index_name",
+          "tenor_months",
+          "payment_amount",
+          "principal_component",
+          "interest_component",
+          "fee_component",
+          "days_past_due",
+          "currency",
+          "payment_method",
+          "margin_bps"
+        ],
+        "mapping_errors": [
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "payment_id",
+            "severity": "WARNING",
+            "message": "Target column 'payment_id' in 'fact_payments' has no direct source. Requires manual mapping or default value."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "date_key",
+            "severity": "WARNING",
+            "message": "Target column 'date_key' in 'fact_payments' has no direct source. Requires manual mapping or default value."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "payment_date",
+            "severity": "WARNING",
+            "message": "Target column 'payment_date' in 'fact_payments' has no direct source. Requires manual mapping or default value."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "loan_id",
+            "severity": "WARNING",
+            "message": "Target column 'loan_id' in 'fact_payments' has no direct source. Requires manual mapping or default value."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "borrower_id",
+            "severity": "WARNING",
+            "message": "Target column 'borrower_id' in 'fact_payments' has no direct source. Requires manual mapping or default value."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "facility_id",
+            "severity": "WARNING",
+            "message": "Target column 'facility_id' in 'fact_payments' has no direct source. Requires manual mapping or default value."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "index_id",
+            "severity": "WARNING",
+            "message": "Target column 'index_id' in 'fact_payments' has no direct source. Requires manual mapping or default value."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "index_name",
+            "severity": "WARNING",
+            "message": "Target column 'index_name' in 'fact_payments' has no direct source. Requires manual mapping or default value."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "tenor_months",
+            "severity": "WARNING",
+            "message": "Target column 'tenor_months' in 'fact_payments' has no direct source. Requires manual mapping or default value."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "payment_amount",
+            "severity": "WARNING",
+            "message": "Target column 'payment_amount' in 'fact_payments' has no direct source. Requires manual mapping or default value."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "principal_component",
+            "severity": "WARNING",
+            "message": "Target column 'principal_component' in 'fact_payments' has no direct source. Requires manual mapping or default value."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "interest_component",
+            "severity": "WARNING",
+            "message": "Target column 'interest_component' in 'fact_payments' has no direct source. Requires manual mapping or default value."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "fee_component",
+            "severity": "WARNING",
+            "message": "Target column 'fee_component' in 'fact_payments' has no direct source. Requires manual mapping or default value."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "days_past_due",
+            "severity": "WARNING",
+            "message": "Target column 'days_past_due' in 'fact_payments' has no direct source. Requires manual mapping or default value."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "currency",
+            "severity": "WARNING",
+            "message": "Target column 'currency' in 'fact_payments' has no direct source. Requires manual mapping or default value."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "payment_method",
+            "severity": "WARNING",
+            "message": "Target column 'payment_method' in 'fact_payments' has no direct source. Requires manual mapping or default value."
+          },
+          {
+            "error_type": "UNMAPPED_TARGET_COLUMN",
+            "target_column": "margin_bps",
+            "severity": "WARNING",
+            "message": "Target column 'margin_bps' in 'fact_payments' has no direct source. Requires manual mapping or default value."
+          }
+        ],
+        "validation_rules": [
+          {
+            "column": "payment_date",
+            "type": "DATE_FORMAT",
+            "reason": "Ensures date column has a valid format"
+          },
+          {
+            "column": "payment_amount",
+            "type": "NUMERIC_VALUE",
+            "reason": "Ensures numeric integrity"
+          },
+          {
+            "column": "principal_component",
+            "type": "NUMERIC_VALUE",
+            "reason": "Ensures numeric integrity"
+          },
+          {
+            "column": "interest_component",
+            "type": "NUMERIC_VALUE",
+            "reason": "Ensures numeric integrity"
+          },
+          {
+            "column": "fee_component",
+            "type": "NUMERIC_VALUE",
+            "reason": "Ensures numeric integrity"
+          },
+          {
+            "column": "days_past_due",
+            "type": "NUMERIC_VALUE",
+            "reason": "Ensures numeric integrity"
+          }
+        ],
+        "primary_key": [],
+        "uniqueness_constraints": []
+      }
+    ]
+  },
+  "metadata": {
+    "source_dataset": "worldbank_staging_dataset",
+    "target_dataset": "worldbank_target_dataset",
+    "mode": "REPORT",
+    "num_mappings": 7,
+    "confidence": "high"
+  }
+}
