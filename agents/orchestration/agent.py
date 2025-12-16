@@ -32,8 +32,191 @@ vertexai.init(project=project_id, location=location)
 
 # In-memory storage for workflow state
 _workflow_state = {}
+_staging_loads = {}
 _schema_mappings = {}
 _validation_results = {}
+
+
+# --- Staging Loader Tools (Delegates to Staging Loader Agent) ---
+
+def load_staging_data(dataset_name: str, bucket_name: str, file_path: str, workflow_id: str = None) -> str:
+    """
+    Load CSV data from Google Cloud Storage into BigQuery staging table.
+    
+    Delegates to the Staging Loader Agent to load data from GCS.
+
+    Args:
+        dataset_name: Target BigQuery dataset name (e.g., "worldbank_staging_dataset")
+        bucket_name: GCS bucket name where CSV files are located
+        file_path: Path to the CSV file within the bucket (e.g., "data/countries.csv")
+        workflow_id: Optional workflow ID to track this load
+
+    Returns:
+        JSON string with load results and workflow context
+    """
+    try:
+        # Import the staging loader function
+        from agents.staging_loader_agent.tools.staging_loader_tools import load_csv_to_bigquery_from_gcs
+        
+        print(f"🔄 Orchestrator: Calling Staging Loader Agent...")
+        print(f"   Dataset: {dataset_name}")
+        print(f"   Bucket: {bucket_name}")
+        print(f"   File: {file_path}")
+        
+        # Set environment variable for staging loader to use
+        os.environ["GCP_PROJECT_ID"] = project_id
+        
+        # Generate a unique ID for this load if not provided
+        if not workflow_id:
+            workflow_id = f"workflow_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+        
+        # Call the staging loader agent
+        result = load_csv_to_bigquery_from_gcs(
+            dataset_name=dataset_name,
+            bucket_name=bucket_name,
+            file_path=file_path
+        )
+        
+        # Store in orchestrator's memory
+        load_id = f"{dataset_name}_{os.path.basename(file_path).replace('.csv', '')}"
+        _staging_loads[load_id] = {
+            "dataset_name": dataset_name,
+            "bucket_name": bucket_name,
+            "file_path": file_path,
+            "result": result,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+        # Update workflow state
+        if workflow_id not in _workflow_state:
+            _workflow_state[workflow_id] = {
+                "created_at": datetime.utcnow().isoformat(),
+                "steps": []
+            }
+        
+        _workflow_state[workflow_id]["steps"].append({
+            "step": "staging_load",
+            "status": "completed",
+            "load_id": load_id,
+            "timestamp": datetime.utcnow().isoformat(),
+            "summary": {
+                "dataset": dataset_name,
+                "file": file_path,
+                "result": result
+            }
+        })
+        
+        return json.dumps({
+            "status": "success",
+            "workflow_id": workflow_id,
+            "load_id": load_id,
+            "message": "Data loaded successfully to staging",
+            "result": result,
+            "next_steps": [
+                f"Data loaded to {dataset_name}",
+                f"Use generate_schema_mapping() to map to target schema",
+                f"Use get_workflow_status('{workflow_id}') to check progress"
+            ]
+        }, indent=2)
+            
+    except Exception as e:
+        return json.dumps({
+            "status": "error",
+            "message": f"Error loading staging data: {str(e)}",
+            "workflow_id": workflow_id
+        }, indent=2)
+
+
+def get_staging_load(load_id: str) -> str:
+    """
+    Retrieve a staging load result by ID.
+
+    Args:
+        load_id: The load ID to retrieve
+
+    Returns:
+        JSON string with the load data
+    """
+    if load_id not in _staging_loads:
+        return json.dumps({
+            "status": "error",
+            "message": f"Load '{load_id}' not found",
+            "available_loads": list(_staging_loads.keys())
+        }, indent=2)
+    
+    return json.dumps({
+        "status": "success",
+        "load_id": load_id,
+        "load_data": _staging_loads[load_id]
+    }, indent=2)
+
+
+def list_staging_loads() -> str:
+    """
+    List all staging loads in the current session.
+
+    Returns:
+        JSON string with list of loads
+    """
+    if not _staging_loads:
+        return json.dumps({
+            "status": "success",
+            "loads": [],
+            "count": 0,
+            "message": "No staging loads yet. Use load_staging_data() to load data."
+        }, indent=2)
+    
+    loads_summary = []
+    for load_id, load_data in _staging_loads.items():
+        loads_summary.append({
+            "load_id": load_id,
+            "dataset": load_data.get("dataset_name"),
+            "file": load_data.get("file_path"),
+            "timestamp": load_data.get("timestamp")
+        })
+    
+    return json.dumps({
+        "status": "success",
+        "loads": loads_summary,
+        "count": len(loads_summary)
+    }, indent=2)
+
+
+def find_schema_files(bucket_name: str, prefix: str = "") -> str:
+    """
+    Find all schema files in a GCS bucket/folder.
+    
+    Searches for any .json file with 'schema' in its name (case-insensitive).
+    Useful for discovering what schema files are available before loading data.
+
+    Args:
+        bucket_name: GCS bucket name
+        prefix: Optional folder prefix to search in (e.g., "data/")
+
+    Returns:
+        JSON string with list of schema files found
+    """
+    try:
+        # Set environment variable for staging loader to use
+        os.environ["GCP_PROJECT_ID"] = project_id
+        
+        # Import the function from staging loader agent
+        from agents.staging_loader_agent.tools.staging_loader_tools import find_schema_files_in_gcs
+        
+        print(f"🔄 Orchestrator: Finding schema files...")
+        print(f"   Bucket: {bucket_name}")
+        print(f"   Prefix: {prefix or '/'}")
+        
+        # Call the staging loader agent
+        result = find_schema_files_in_gcs(bucket_name=bucket_name, prefix=prefix)
+        
+        return result
+            
+    except Exception as e:
+        return json.dumps({
+            "status": "error",
+            "message": f"Error finding schema files: {str(e)}"
+        }, indent=2)
 
 
 # --- Schema Mapping Tools (Delegates to Schema Mapping Agent) ---
@@ -166,6 +349,10 @@ def validate_data(mapping_id: str, mode: str = "REPORT", workflow_id: str = None
         print(f"   Mapping ID: {mapping_id}")
         print(f"   Source Dataset: {source_dataset}")
         print(f"   Mode: {mode}")
+        
+        # Set environment variable for validation agent to use
+        # The orchestrator already has project_id configured
+        os.environ["GCP_PROJECT_ID"] = project_id
         
         # Import validation function
         from agents.validation.data_validator import validate_schema_mapping as validate
@@ -503,18 +690,25 @@ root_agent = Agent(
 
 **Your Role:**
 You manage end-to-end data integration workflows by coordinating:
-1. **Schema Mapping Agent**: Generates intelligent schema mappings between datasets
-2. **Validation Agent**: Validates data quality based on schema mappings
-3. **Future Agents**: Extensible to integrate with ETL, transformation, and other agents
+1. **Staging Loader Agent**: Loads CSV data from GCS to BigQuery staging tables
+2. **Schema Mapping Agent**: Generates intelligent schema mappings between datasets
+3. **Validation Agent**: Validates data quality based on schema mappings
+4. **Future Agents**: Extensible to integrate with ETL, transformation, and other agents
 
 **Your Capabilities:**
 
-**Schema Mapping:**
+**Data Loading (STAGE 1):**
+- `load_staging_data(dataset_name, bucket_name, file_path, workflow_id)`: Load CSV from GCS to BigQuery
+- `find_schema_files(bucket_name, prefix)`: Find all schema files in GCS bucket
+- `get_staging_load(load_id)`: Retrieve load results
+- `list_staging_loads()`: See all data loads
+
+**Schema Mapping (STAGE 2):**
 - `generate_schema_mapping(source_dataset, target_dataset, mode, workflow_id)`: Generate schema mapping
 - `get_mapping(mapping_id)`: Retrieve a specific mapping
 - `list_mappings()`: See all generated mappings
 
-**Data Validation:**
+**Data Validation (STAGE 3):**
 - `validate_data(mapping_id, mode, workflow_id)`: Validate data using a mapping
 - `get_validation_results(validation_id)`: Get detailed validation results
 
@@ -527,18 +721,20 @@ You manage end-to-end data integration workflows by coordinating:
 
 **For Complete Workflows:**
 When a user wants to run a full data integration:
-1. Suggest using `run_complete_workflow()` for simplicity
-2. Explain what steps will be executed
-3. Provide the workflow_id for tracking
-4. Explain results and next steps
+1. Ask if they need to load data first (if yes, use `load_staging_data()`)
+2. Suggest using `run_complete_workflow()` for schema mapping + validation
+3. Explain what steps will be executed
+4. Provide the workflow_id for tracking
+5. Explain results and next steps
 
 **For Step-by-Step Workflows:**
 When a user wants more control:
-1. Start with `generate_schema_mapping()` 
-2. Review the mapping with the user
-3. Then run `validate_data()` with the mapping_id
-4. Track progress with workflow_id
-5. Provide detailed results at each step
+1. *Optional*: Start with `load_staging_data()` if data needs loading
+2. Then `generate_schema_mapping()` to map schemas
+3. Review the mapping with the user
+4. Then run `validate_data()` with the mapping_id
+5. Track progress with workflow_id
+6. Provide detailed results at each step
 
 **Workflow Guidance:**
 - Always explain what each step does
@@ -600,11 +796,16 @@ You: [Call get_workflow_status]
 
 You are the single point of contact for data integration workflows. Make the process smooth and understandable!""",
     tools=[
-        # Schema mapping tools
+        # Staging loader tools (STAGE 1)
+        load_staging_data,
+        find_schema_files,
+        get_staging_load,
+        list_staging_loads,
+        # Schema mapping tools (STAGE 2)
         generate_schema_mapping,
         get_mapping,
         list_mappings,
-        # Validation tools
+        # Validation tools (STAGE 3)
         validate_data,
         get_validation_results,
         # Workflow management tools
