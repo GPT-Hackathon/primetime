@@ -1,0 +1,22 @@
+# Flask Web Dashboard Dependencies
+
+# Web framework
+flask>=2.3.0
+gunicorn>=21.0.0
+
+# Google Cloud dependencies
+google-cloud-bigquery>=3.13.0
+google-cloud-storage>=2.10.0
+google-cloud-aiplatform>=1.38.0
+
+# Google ADK for agents
+google-adk>=1.0.0
+
+# Vertex AI
+vertexai>=1.38.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# SQL parsing (for DDL handling)
+sqlparse>=0.4.4

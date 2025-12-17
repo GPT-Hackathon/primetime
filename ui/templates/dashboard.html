@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generic Multi-Agent ETL Pipeline</title>
+    <title>GPT: Gen Prime Time</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 </head>
@@ -11,7 +11,7 @@
     <div x-data="dashboardApp()" x-init="init()" class="container mx-auto px-4 py-8">
         <!-- Header -->
         <div class="mb-8">
-            <h1 class="text-4xl font-bold mb-2">🚀 GPT : Gen Prime Time</h1>
+            <h1 class="text-4xl font-bold mb-2">GPT : Gen Prime Time</h1>
         </div>
 
         <!-- Configuration Form -->
@@ -24,7 +24,7 @@
                     <input
                         type="text"
                         x-model="config.source_files"
-                        placeholder="dataSets/Sample-DataSet-WorldBankData/SourceSchemaData/*.csv"
+                        placeholder="datasets-ccibt-hack25ww7-750/datasets/uc2-multi-agent-workflow-for-intelligent-data-integration/Sample-DataSet-WorldBankData/SourceSchemaData/*.csv"
                         class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                     <p class="text-xs text-gray-400 mt-1">Supports wildcards (*.csv)</p>
@@ -35,7 +35,7 @@
                     <input
                         type="text"
                         x-model="config.target_ddls"
-                        placeholder="dataSets/Sample-DataSet-WorldBankData/TargetSchema/*.sql"
+                        placeholder="datasets-ccibt-hack25ww7-750/datasets/uc2-multi-agent-workflow-for-intelligent-data-integration/Sample-DataSet-WorldBankData/TargetSchema/*.sql"
                         class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                     <p class="text-xs text-gray-400 mt-1">Supports wildcards (*.sql)</p>
@@ -60,8 +60,8 @@
                     :disabled="state.status === 'running' || loadState.status === 'loading'"
                     class="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-md font-semibold transition-colors"
                 >
-                    <span x-show="loadState.status !== 'loading'">📥 Load Data</span>
-                    <span x-show="loadState.status === 'loading'">⏳ Loading...</span>
+                    <span x-show="loadState.status !== 'loading'">Load Data</span>
+                    <span x-show="loadState.status === 'loading'">Loading...</span>
                 </button>
 
                 <button
@@ -69,72 +69,190 @@
                     :disabled="state.status === 'running' || loadState.status !== 'loaded'"
                     class="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-md font-semibold transition-colors"
                 >
-                    <span x-show="state.status !== 'running'">▶️ Run Pipeline</span>
-                    <span x-show="state.status === 'running'">⏳ Running...</span>
+                    <span x-show="state.status !== 'running'">Run Pipeline</span>
+                    <span x-show="state.status === 'running'">Running...</span>
                 </button>
 
                 <button
                     @click="clearState()"
-                    :disabled="state.status === 'running'"
+                    :disabled="state.status === 'running' || loadState.status === 'loading'"
                     class="px-6 py-3 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-md font-semibold transition-colors"
                 >
-                    🗑️ Clear
+                    Clear
                 </button>
             </div>
 
             <!-- Load Status Badge -->
-            <div x-show="loadState.status !== 'idle'" class="mt-4">
-                <span
-                    class="px-3 py-1 rounded-full text-sm font-medium"
-                    :class="{
-                        'bg-yellow-600': loadState.status === 'loading',
-                        'bg-green-600': loadState.status === 'loaded',
-                        'bg-red-600': loadState.status === 'error'
-                    }"
-                >
-                    <span x-show="loadState.status === 'loading'">⏳ Loading data into staging...</span>
-                    <span x-show="loadState.status === 'loaded'">✅ Data loaded: <span x-text="loadState.fileCount"></span> files</span>
-                    <span x-show="loadState.status === 'error'">❌ Load failed</span>
-                </span>
+            <div x-show="loadState.status !== 'idle'" class="mt-4" x-transition>
+                <div class="flex items-center gap-3">
+                    <span
+                        class="px-3 py-1 rounded-full text-sm font-medium transition-all duration-300"
+                        :class="{
+                            'bg-yellow-600 animate-pulse': loadState.status === 'loading',
+                            'bg-green-600': loadState.status === 'loaded',
+                            'bg-red-600': loadState.status === 'error'
+                        }"
+                    >
+                        <span x-show="loadState.status === 'loading'">Loading data into BigQuery...</span>
+                        <span x-show="loadState.status === 'loaded'">Data loaded: <span x-text="loadState.sourceCount"></span> files, <span x-text="loadState.rowCount?.toLocaleString()"></span> rows</span>
+                        <span x-show="loadState.status === 'error'">Load failed: <span x-text="loadState.error || 'Unknown error'"></span></span>
+                    </span>
+                    <!-- Progress indicator during loading -->
+                    <span x-show="loadState.status === 'loading'" class="text-sm text-gray-400">
+                        <span x-text="loadState.tables.length"></span>/<span x-text="loadState.sourceCount || '?'"></span> tables loaded
+                    </span>
+                </div>
             </div>
         </div>
 
-        <!-- Load Data Results -->
-        <div x-show="loadState.status === 'loaded'" class="bg-gray-800 rounded-lg p-6 mb-6 shadow-lg">
-            <h2 class="text-2xl font-semibold mb-4">📂 Loaded Data Summary</h2>
+        <!-- Session Info -->
+        <div x-show="loadState.sessionId" class="bg-gray-800 rounded-lg p-6 mb-6 shadow-lg">
+            <h2 class="text-2xl font-semibold mb-4">Session Info</h2>
 
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div class="bg-gray-700 rounded-lg p-4">
+                    <div class="text-sm text-gray-400 mb-1">Session ID</div>
+                    <div class="font-mono text-lg text-cyan-400" x-text="loadState.sessionId"></div>
+                </div>
+                <div class="bg-gray-700 rounded-lg p-4">
+                    <div class="text-sm text-gray-400 mb-1">Staging Dataset</div>
+                    <div class="font-mono text-lg text-green-400" x-text="loadState.stagingDataset"></div>
+                </div>
+                <div class="bg-gray-700 rounded-lg p-4">
+                    <div class="text-sm text-gray-400 mb-1">Target Dataset</div>
+                    <div class="font-mono text-lg text-purple-400" x-text="loadState.targetDataset"></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div class="bg-gray-700 rounded-lg p-4 text-center">
-                    <div class="text-3xl font-bold text-green-400" x-text="loadState.fileCount || 0"></div>
+                    <div class="text-3xl font-bold text-green-400" x-text="loadState.sourceCount || 0"></div>
                     <div class="text-sm text-gray-400">Source Files</div>
                 </div>
-                <div class="bg-gray-700 rounded-lg p-4 text-center">
-                    <div class="text-3xl font-bold text-blue-400" x-text="loadState.tableCount || 0"></div>
+                <div
+                    @click="loadState.tables.length > 0 && (tableListModal.show = true, tableListModal.type = 'staging')"
+                    class="bg-gray-700 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-600 transition-colors"
+                    :class="{'cursor-pointer hover:bg-gray-600': loadState.tables.length > 0}"
+                >
+                    <div class="text-3xl font-bold text-blue-400" x-text="loadState.tables.length || 0"></div>
                     <div class="text-sm text-gray-400">Staging Tables</div>
+                    <div x-show="loadState.tables.length > 0" class="text-xs text-blue-400 mt-1">Click to view</div>
                 </div>
                 <div class="bg-gray-700 rounded-lg p-4 text-center">
                     <div class="text-3xl font-bold text-purple-400" x-text="loadState.rowCount || 0"></div>
                     <div class="text-sm text-gray-400">Total Rows</div>
                 </div>
-                <div class="bg-gray-700 rounded-lg p-4 text-center">
+                <div
+                    @click="loadState.targetCount > 0 && (tableListModal.show = true, tableListModal.type = 'target')"
+                    class="bg-gray-700 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-600 transition-colors"
+                    :class="{'cursor-pointer hover:bg-gray-600': loadState.targetCount > 0}"
+                >
                     <div class="text-3xl font-bold text-cyan-400" x-text="loadState.targetCount || 0"></div>
                     <div class="text-sm text-gray-400">Target Tables</div>
+                    <div x-show="loadState.targetCount > 0" class="text-xs text-cyan-400 mt-1">Click to view</div>
                 </div>
             </div>
+        </div>
 
-            <!-- Source Tables List -->
-            <div x-show="loadState.tables && loadState.tables.length > 0">
-                <h3 class="text-lg font-semibold mb-2">Source Tables</h3>
-                <div class="flex flex-wrap gap-2">
-                    <template x-for="table in loadState.tables" :key="table.name">
+        <!-- Table List Modal (moved outside Session Info div to prevent closing on state updates) -->
+        <div x-show="tableListModal.show" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="tableListModal.show = false">
+                <div class="bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold">
+                            <span x-show="tableListModal.type === 'staging'" class="text-blue-400">Staging Tables</span>
+                            <span x-show="tableListModal.type === 'target'" class="text-cyan-400">Target Tables</span>
+                            <span class="text-gray-400 text-sm ml-2" x-text="tableListModal.type === 'staging' ? `(${loadState.stagingDataset})` : `(${loadState.targetDataset})`"></span>
+                        </h3>
+                        <button @click="tableListModal.show = false" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+                    </div>
+
+                    <!-- Table Grid -->
+                    <div class="overflow-auto flex-1">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-700 sticky top-0">
+                                <tr>
+                                    <th class="px-4 py-3 text-left font-semibold">Table Name</th>
+                                    <th class="px-4 py-3 text-right font-semibold">Rows</th>
+                                    <th class="px-4 py-3 text-right font-semibold">Columns</th>
+                                    <th class="px-4 py-3 text-center font-semibold">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Staging Tables -->
+                                <template x-if="tableListModal.type === 'staging'">
+                                    <template x-for="(table, idx) in loadState.tables" :key="table.table_name">
+                                        <tr class="border-b border-gray-700 hover:bg-gray-700">
+                                            <td class="px-4 py-3">
+                                                <button
+                                                    @click="tableListModal.show = false; previewTable(table.table_name, 'staging')"
+                                                    class="text-blue-400 hover:text-blue-300 hover:underline font-medium"
+                                                    x-text="table.table_name"
+                                                ></button>
+                                            </td>
+                                            <td class="px-4 py-3 text-right text-green-400 font-mono" x-text="table.rows?.toLocaleString() || '-'"></td>
+                                            <td class="px-4 py-3 text-right text-gray-400 font-mono" x-text="table.columns || '-'"></td>
+                                            <td class="px-4 py-3 text-center">
+                                                <button
+                                                    @click="tableListModal.show = false; previewTable(table.table_name, 'staging')"
+                                                    class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs transition-colors"
+                                                >
+                                                    View Data
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </template>
+
+                                <!-- Target Tables -->
+                                <template x-if="tableListModal.type === 'target'">
+                                    <template x-for="(table, idx) in loadState.targetTables" :key="table.table_name">
+                                        <tr class="border-b border-gray-700 hover:bg-gray-700">
+                                            <td class="px-4 py-3">
+                                                <button
+                                                    @click="tableListModal.show = false; previewTable(table.table_name, 'target')"
+                                                    class="text-cyan-400 hover:text-cyan-300 hover:underline font-medium"
+                                                    x-text="table.table_name"
+                                                ></button>
+                                            </td>
+                                            <td class="px-4 py-3 text-right text-green-400 font-mono" x-text="table.rows?.toLocaleString() || '0'"></td>
+                                            <td class="px-4 py-3 text-right text-gray-400 font-mono" x-text="table.columns || '-'"></td>
+                                            <td class="px-4 py-3 text-center">
+                                                <button
+                                                    @click="tableListModal.show = false; previewTable(table.table_name, 'target')"
+                                                    class="px-3 py-1 bg-cyan-600 hover:bg-cyan-700 rounded text-xs transition-colors"
+                                                >
+                                                    View Data
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </template>
+                            </tbody>
+                        </table>
+
+                        <!-- Empty state for target tables -->
+                        <div x-show="tableListModal.type === 'target' && (!loadState.targetTables || loadState.targetTables.length === 0)" class="text-center py-8 text-gray-400">
+                            <p>Target tables are empty (schema only - no data yet)</p>
+                            <p class="text-sm mt-2">Run the pipeline to populate target tables</p>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="mt-4 pt-4 border-t border-gray-700 flex justify-between items-center text-sm text-gray-400">
+                        <span x-show="tableListModal.type === 'staging'">
+                            Total: <span class="text-white" x-text="loadState.tables.length"></span> tables,
+                            <span class="text-white" x-text="loadState.rowCount?.toLocaleString()"></span> rows
+                        </span>
+                        <span x-show="tableListModal.type === 'target'">
+                            Total: <span class="text-white" x-text="loadState.targetTables?.length || loadState.targetCount"></span> tables
+                        </span>
                         <button
-                            @click="previewTable(table.name)"
-                            class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-md text-sm transition-colors"
+                            @click="tableListModal.show = false"
+                            class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded transition-colors"
                         >
-                            📊 <span x-text="table.name"></span>
-                            <span class="text-gray-400 text-xs" x-text="`(${table.rows} rows)`"></span>
+                            Close
                         </button>
-                    </template>
+                    </div>
                 </div>
             </div>
 
@@ -142,7 +260,14 @@
             <div x-show="previewData.show" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="previewData.show = false">
                 <div class="bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-hidden flex flex-col">
                     <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xl font-semibold">📊 <span x-text="previewData.tableName"></span></h3>
+                        <h3 class="text-xl font-semibold">
+                            <span x-text="previewData.tableName"></span>
+                            <span
+                                class="ml-2 text-xs px-2 py-1 rounded"
+                                :class="previewData.datasetType === 'staging' ? 'bg-blue-600' : 'bg-cyan-600'"
+                                x-text="previewData.datasetType === 'staging' ? 'Staging' : 'Target'"
+                            ></span>
+                        </h3>
                         <button @click="previewData.show = false" class="text-gray-400 hover:text-white text-2xl">&times;</button>
                     </div>
                     <div class="overflow-auto flex-1">
@@ -172,78 +297,616 @@
                                 @click="loadPreviewPage(previewData.page - 1)"
                                 :disabled="previewData.page <= 1"
                                 class="px-3 py-1 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-600 rounded"
-                            >← Prev</button>
+                            >Prev</button>
                             <span class="px-3 py-1">Page <span x-text="previewData.page"></span></span>
                             <button
                                 @click="loadPreviewPage(previewData.page + 1)"
                                 :disabled="previewData.rows.length < previewData.pageSize"
                                 class="px-3 py-1 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-600 rounded"
-                            >Next →</button>
+                            >Next</button>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Progress Bar -->
-        <div x-show="state.status === 'running' || state.status === 'completed'" class="bg-gray-800 rounded-lg p-6 mb-6 shadow-lg">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="text-lg font-semibold">Progress</h3>
-                <span class="text-sm" x-text="state.current_step"></span>
+            <!-- Schema Mappings Modal -->
+            <div x-show="mappingsModal.show" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="mappingsModal.show = false">
+                <div class="bg-gray-800 rounded-lg p-6 max-w-6xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold text-purple-400">Schema Mappings</h3>
+                        <button @click="mappingsModal.show = false" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+                    </div>
+
+                    <!-- Tabs -->
+                    <div class="flex gap-2 mb-4 border-b border-gray-700 pb-2">
+                        <button
+                            @click="mappingsModal.activeTab = 'mappings'"
+                            class="px-4 py-2 rounded-t font-medium transition-colors"
+                            :class="mappingsModal.activeTab === 'mappings' ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'"
+                        >
+                            Table Mappings (<span x-text="getMappingsCount()"></span>)
+                        </button>
+                        <button
+                            @click="mappingsModal.activeTab = 'issues'"
+                            class="px-4 py-2 rounded-t font-medium transition-colors"
+                            :class="mappingsModal.activeTab === 'issues' ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'"
+                        >
+                            Issues/Unmapped (<span x-text="getIssuesCount()"></span>)
+                        </button>
+                    </div>
+
+                    <!-- Mappings Tab Content -->
+                    <div x-show="mappingsModal.activeTab === 'mappings'" class="overflow-auto flex-1">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-700 sticky top-0">
+                                <tr>
+                                    <th class="px-4 py-3 text-left font-semibold">Source Table</th>
+                                    <th class="px-4 py-3 text-left font-semibold">Target Table</th>
+                                    <th class="px-4 py-3 text-center font-semibold">Confidence</th>
+                                    <th class="px-4 py-3 text-center font-semibold">Columns</th>
+                                    <th class="px-4 py-3 text-center font-semibold">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="(mapping, idx) in getMappings()" :key="idx">
+                                    <tr class="border-b border-gray-700 hover:bg-gray-700 cursor-pointer" @click="selectMapping(mapping)">
+                                        <td class="px-4 py-3">
+                                            <span class="font-mono text-blue-400" x-text="getTableName(mapping.source_table)"></span>
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <span class="font-mono text-green-400" x-text="getTableName(mapping.target_table)"></span>
+                                        </td>
+                                        <td class="px-4 py-3 text-center">
+                                            <span
+                                                class="px-2 py-1 rounded text-xs font-bold"
+                                                :class="{
+                                                    'bg-green-600': mapping.match_confidence >= 0.8,
+                                                    'bg-yellow-600': mapping.match_confidence >= 0.5 && mapping.match_confidence < 0.8,
+                                                    'bg-red-600': mapping.match_confidence < 0.5
+                                                }"
+                                                x-text="(mapping.match_confidence * 100).toFixed(0) + '%'"
+                                            ></span>
+                                        </td>
+                                        <td class="px-4 py-3 text-center text-gray-400" x-text="mapping.column_mappings?.length || 0"></td>
+                                        <td class="px-4 py-3 text-center">
+                                            <button
+                                                @click.stop="selectMapping(mapping)"
+                                                class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs transition-colors"
+                                            >
+                                                View Columns
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Issues Tab Content -->
+                    <div x-show="mappingsModal.activeTab === 'issues'" class="overflow-auto flex-1">
+                        <div class="space-y-4">
+                            <!-- Unmapped Tables -->
+                            <template x-for="(mapping, idx) in getUnmappedTables()" :key="idx">
+                                <div class="bg-gray-900 rounded-lg p-4">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <span class="px-2 py-1 bg-red-600 rounded text-xs font-bold">UNMAPPED</span>
+                                        <span class="font-mono text-yellow-400" x-text="getTableName(mapping.target_table)"></span>
+                                        <span class="text-gray-500 text-xs" x-text="'Confidence: ' + (mapping.match_confidence * 100).toFixed(0) + '%'"></span>
+                                    </div>
+                                    <template x-if="mapping.mapping_errors?.length > 0">
+                                        <div class="space-y-1">
+                                            <template x-for="(error, errIdx) in mapping.mapping_errors" :key="errIdx">
+                                                <div class="text-sm flex items-start gap-2">
+                                                    <span class="px-1 rounded text-xs" :class="error.severity === 'ERROR' ? 'bg-red-800' : 'bg-yellow-800'" x-text="error.severity"></span>
+                                                    <span class="text-gray-300" x-text="error.message"></span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+
+                            <!-- Tables with Issues -->
+                            <template x-for="(mapping, idx) in getMappingsWithIssues()" :key="idx">
+                                <div class="bg-gray-900 rounded-lg p-4">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <span class="px-2 py-1 bg-yellow-600 rounded text-xs font-bold">WARNING</span>
+                                        <span class="font-mono text-blue-400" x-text="getTableName(mapping.source_table)"></span>
+                                        <span class="text-gray-500">→</span>
+                                        <span class="font-mono text-green-400" x-text="getTableName(mapping.target_table)"></span>
+                                    </div>
+                                    <!-- Unmapped Source Columns -->
+                                    <template x-if="mapping.unmapped_source_columns?.length > 0">
+                                        <div class="mb-2">
+                                            <span class="text-sm text-gray-400">Unmapped Source Columns:</span>
+                                            <div class="flex flex-wrap gap-1 mt-1">
+                                                <template x-for="col in mapping.unmapped_source_columns" :key="col">
+                                                    <span class="px-2 py-1 bg-blue-900 text-blue-300 rounded text-xs font-mono" x-text="col"></span>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <!-- Unmapped Target Columns -->
+                                    <template x-if="mapping.unmapped_target_columns?.length > 0">
+                                        <div class="mb-2">
+                                            <span class="text-sm text-gray-400">Unmapped Target Columns:</span>
+                                            <div class="flex flex-wrap gap-1 mt-1">
+                                                <template x-for="col in mapping.unmapped_target_columns" :key="col">
+                                                    <span class="px-2 py-1 bg-red-900 text-red-300 rounded text-xs font-mono" x-text="col"></span>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <!-- Mapping Errors -->
+                                    <template x-if="mapping.mapping_errors?.length > 0">
+                                        <div class="space-y-1">
+                                            <template x-for="(error, errIdx) in mapping.mapping_errors" :key="errIdx">
+                                                <div class="text-sm flex items-start gap-2">
+                                                    <span class="px-1 rounded text-xs" :class="error.severity === 'ERROR' ? 'bg-red-800' : 'bg-yellow-800'" x-text="error.severity"></span>
+                                                    <span class="text-gray-300" x-text="error.message"></span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+
+                            <!-- No Issues -->
+                            <div x-show="getUnmappedTables().length === 0 && getMappingsWithIssues().length === 0" class="text-center py-8 text-gray-400">
+                                <p>No issues or unmapped tables found.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="mt-4 pt-4 border-t border-gray-700 flex justify-between items-center text-sm text-gray-400">
+                        <span>
+                            Total: <span class="text-white" x-text="getMappingsCount()"></span> table mappings
+                        </span>
+                        <button
+                            @click="mappingsModal.show = false"
+                            class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded transition-colors"
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            <div class="w-full bg-gray-700 rounded-full h-4 mb-2">
-                <div
-                    class="bg-blue-600 h-4 rounded-full transition-all duration-500"
-                    :style="`width: ${state.progress}%`"
-                ></div>
+            <!-- Column Mappings Detail Modal -->
+            <div x-show="columnMappingsModal.show" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="columnMappingsModal.show = false">
+                <div class="bg-gray-800 rounded-lg p-6 max-w-5xl w-full mx-4 max-h-[85vh] overflow-hidden flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="text-xl font-semibold text-cyan-400">Column Mappings</h3>
+                            <p class="text-sm text-gray-400 mt-1">
+                                <span class="font-mono text-blue-400" x-text="getTableName(columnMappingsModal.mapping?.source_table || '')"></span>
+                                <span class="mx-2">→</span>
+                                <span class="font-mono text-green-400" x-text="getTableName(columnMappingsModal.mapping?.target_table || '')"></span>
+                                <span class="ml-2 px-2 py-0.5 rounded text-xs font-bold" :class="{
+                                    'bg-green-600': columnMappingsModal.mapping?.match_confidence >= 0.8,
+                                    'bg-yellow-600': columnMappingsModal.mapping?.match_confidence >= 0.5 && columnMappingsModal.mapping?.match_confidence < 0.8,
+                                    'bg-red-600': columnMappingsModal.mapping?.match_confidence < 0.5
+                                }" x-text="((columnMappingsModal.mapping?.match_confidence || 0) * 100).toFixed(0) + '% confidence'"></span>
+                            </p>
+                        </div>
+                        <button @click="columnMappingsModal.show = false" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+                    </div>
+
+                    <!-- Column Mappings Grid -->
+                    <div class="overflow-auto flex-1">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-700 sticky top-0">
+                                <tr>
+                                    <th class="px-3 py-2 text-left font-semibold">Source Column</th>
+                                    <th class="px-3 py-2 text-left font-semibold">Type</th>
+                                    <th class="px-3 py-2 text-center font-semibold">→</th>
+                                    <th class="px-3 py-2 text-left font-semibold">Target Column</th>
+                                    <th class="px-3 py-2 text-left font-semibold">Type</th>
+                                    <th class="px-3 py-2 text-left font-semibold">Transformation</th>
+                                    <th class="px-3 py-2 text-left font-semibold">Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="(col, idx) in columnMappingsModal.mapping?.column_mappings || []" :key="idx">
+                                    <tr class="border-b border-gray-700 hover:bg-gray-700" :class="{'bg-yellow-900 bg-opacity-30': col.source_column === 'GENERATED' || col.source_column === 'UNMAPPED'}">
+                                        <td class="px-3 py-2 font-mono text-blue-400">
+                                            <span x-text="col.source_column"></span>
+                                            <span x-show="col.source_column === 'GENERATED'" class="ml-1 px-1 bg-purple-800 text-purple-200 rounded text-xs">gen</span>
+                                            <span x-show="col.source_column === 'UNMAPPED'" class="ml-1 px-1 bg-red-800 text-red-200 rounded text-xs">missing</span>
+                                        </td>
+                                        <td class="px-3 py-2 text-gray-400 text-xs" x-text="col.source_type"></td>
+                                        <td class="px-3 py-2 text-center">
+                                            <span x-show="col.type_conversion_needed" class="text-yellow-400">⚡</span>
+                                            <span x-show="!col.type_conversion_needed" class="text-gray-500">→</span>
+                                        </td>
+                                        <td class="px-3 py-2 font-mono text-green-400" x-text="col.target_column"></td>
+                                        <td class="px-3 py-2 text-gray-400 text-xs" x-text="col.target_type"></td>
+                                        <td class="px-3 py-2 text-yellow-400 font-mono text-xs max-w-xs truncate" :title="col.transformation" x-text="col.transformation || '-'"></td>
+                                        <td class="px-3 py-2 text-gray-400 text-xs max-w-xs truncate" :title="col.notes" x-text="col.notes || '-'"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Additional Info -->
+                    <div class="mt-4 pt-4 border-t border-gray-700 grid grid-cols-3 gap-4 text-sm">
+                        <div x-show="columnMappingsModal.mapping?.primary_key?.length > 0">
+                            <span class="text-gray-400">Primary Key:</span>
+                            <span class="ml-2 font-mono text-cyan-400" x-text="columnMappingsModal.mapping?.primary_key?.join(', ') || '-'"></span>
+                        </div>
+                        <div x-show="columnMappingsModal.mapping?.unmapped_source_columns?.length > 0">
+                            <span class="text-gray-400">Unmapped Source:</span>
+                            <span class="ml-2 font-mono text-yellow-400" x-text="columnMappingsModal.mapping?.unmapped_source_columns?.join(', ') || '-'"></span>
+                        </div>
+                        <div x-show="columnMappingsModal.mapping?.unmapped_target_columns?.length > 0">
+                            <span class="text-gray-400">Unmapped Target:</span>
+                            <span class="ml-2 font-mono text-red-400" x-text="columnMappingsModal.mapping?.unmapped_target_columns?.join(', ') || '-'"></span>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="mt-4 pt-4 border-t border-gray-700 flex justify-between items-center">
+                        <span class="text-sm text-gray-400">
+                            <span x-text="columnMappingsModal.mapping?.column_mappings?.length || 0"></span> column mappings
+                        </span>
+                        <div class="flex gap-2">
+                            <button
+                                @click="columnMappingsModal.show = false"
+                                class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded transition-colors"
+                            >
+                                Back to Mappings
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="flex justify-between text-sm text-gray-400">
-                <span x-text="`${state.progress}%`"></span>
-                <span x-show="state.status === 'completed'" class="text-green-400">✅ Complete!</span>
-                <span x-show="state.status === 'error'" class="text-red-400">❌ Error</span>
+            <!-- Validation Errors Modal -->
+            <div x-show="validationModal.show" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="validationModal.show = false">
+                <div class="bg-gray-800 rounded-lg p-6 max-w-6xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="text-xl font-semibold text-orange-400">Validation Errors</h3>
+                            <p class="text-sm text-gray-400 mt-1" x-show="getValidationSummary()">
+                                <span x-text="getValidationSummary()?.total_tables_validated || 0"></span> tables validated |
+                                <span class="text-red-400" x-text="getValidationSummary()?.total_errors || 0"></span> errors |
+                                <span class="text-yellow-400" x-text="getValidationSummary()?.total_warnings || 0"></span> warnings
+                            </p>
+                        </div>
+                        <button @click="validationModal.show = false" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+                    </div>
+
+                    <!-- Filter Tabs -->
+                    <div class="flex gap-2 mb-4 border-b border-gray-700 pb-2">
+                        <button
+                            @click="validationModal.filter = 'all'"
+                            class="px-4 py-2 rounded-t font-medium transition-colors"
+                            :class="validationModal.filter === 'all' ? 'bg-orange-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'"
+                        >
+                            All (<span x-text="getValidationErrors().length"></span>)
+                        </button>
+                        <button
+                            @click="validationModal.filter = 'ERROR'"
+                            class="px-4 py-2 rounded-t font-medium transition-colors"
+                            :class="validationModal.filter === 'ERROR' ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'"
+                        >
+                            Errors (<span x-text="getValidationErrors().filter(e => e.severity === 'ERROR').length"></span>)
+                        </button>
+                        <button
+                            @click="validationModal.filter = 'WARNING'"
+                            class="px-4 py-2 rounded-t font-medium transition-colors"
+                            :class="validationModal.filter === 'WARNING' ? 'bg-yellow-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'"
+                        >
+                            Warnings (<span x-text="getValidationErrors().filter(e => e.severity === 'WARNING').length"></span>)
+                        </button>
+                    </div>
+
+                    <!-- Validation Errors Grid -->
+                    <div class="overflow-auto flex-1">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-700 sticky top-0">
+                                <tr>
+                                    <th class="px-3 py-2 text-left font-semibold">Severity</th>
+                                    <th class="px-3 py-2 text-left font-semibold">Table</th>
+                                    <th class="px-3 py-2 text-left font-semibold">Error Type</th>
+                                    <th class="px-3 py-2 text-left font-semibold">Column</th>
+                                    <th class="px-3 py-2 text-center font-semibold">Count</th>
+                                    <th class="px-3 py-2 text-left font-semibold">Message</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="(error, idx) in getFilteredValidationErrors()" :key="idx">
+                                    <tr class="border-b border-gray-700 hover:bg-gray-700 cursor-pointer" @click="selectValidationError(error)">
+                                        <td class="px-3 py-2">
+                                            <span
+                                                class="px-2 py-1 rounded text-xs font-bold"
+                                                :class="error.severity === 'ERROR' ? 'bg-red-600' : 'bg-yellow-600'"
+                                                x-text="error.severity"
+                                            ></span>
+                                        </td>
+                                        <td class="px-3 py-2 font-mono text-blue-400" x-text="getTableName(error.table_name)"></td>
+                                        <td class="px-3 py-2">
+                                            <span
+                                                class="px-2 py-1 rounded text-xs"
+                                                :class="{
+                                                    'bg-purple-800 text-purple-200': error.error_type === 'UNIQUENESS',
+                                                    'bg-blue-800 text-blue-200': error.error_type === 'NOT_NULL',
+                                                    'bg-cyan-800 text-cyan-200': error.error_type === 'DATA_TYPE',
+                                                    'bg-pink-800 text-pink-200': error.error_type === 'REFERENTIAL_INTEGRITY',
+                                                    'bg-green-800 text-green-200': error.error_type === 'FORMAT'
+                                                }"
+                                                x-text="error.error_type"
+                                            ></span>
+                                        </td>
+                                        <td class="px-3 py-2 font-mono text-yellow-400" x-text="error.failed_column"></td>
+                                        <td class="px-3 py-2 text-center">
+                                            <span class="px-2 py-1 bg-gray-700 rounded text-white font-bold" x-text="error.error_count"></span>
+                                        </td>
+                                        <td class="px-3 py-2 text-gray-300 max-w-md truncate" :title="error.error_message" x-text="error.error_message"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+
+                        <!-- No errors message -->
+                        <div x-show="getFilteredValidationErrors().length === 0" class="text-center py-8 text-gray-400">
+                            <p>No validation errors found for this filter.</p>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="mt-4 pt-4 border-t border-gray-700 flex justify-between items-center text-sm text-gray-400">
+                        <span>
+                            Showing <span class="text-white" x-text="getFilteredValidationErrors().length"></span> of
+                            <span class="text-white" x-text="getValidationErrors().length"></span> issues
+                        </span>
+                        <button
+                            @click="validationModal.show = false"
+                            class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded transition-colors"
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <!-- Results Summary -->
-        <div x-show="state.status === 'completed' && state.results" class="bg-gray-800 rounded-lg p-6 mb-6 shadow-lg">
-            <h2 class="text-2xl font-semibold mb-4">📊 Pipeline Results</h2>
+            <!-- Validation Error Detail Modal -->
+            <div x-show="validationDetailModal.show" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="validationDetailModal.show = false">
+                <div class="bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="text-xl font-semibold text-orange-400">Error Details</h3>
+                            <p class="text-sm text-gray-400 mt-1">
+                                <span
+                                    class="px-2 py-1 rounded text-xs font-bold mr-2"
+                                    :class="validationDetailModal.error?.severity === 'ERROR' ? 'bg-red-600' : 'bg-yellow-600'"
+                                    x-text="validationDetailModal.error?.severity"
+                                ></span>
+                                <span class="font-mono text-blue-400" x-text="getTableName(validationDetailModal.error?.table_name || '')"></span>
+                            </p>
+                        </div>
+                        <button @click="validationDetailModal.show = false" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+                    </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <div class="bg-gray-700 rounded-lg p-4 text-center">
-                    <div class="text-3xl font-bold text-blue-400" x-text="state.results.source_files || 0"></div>
-                    <div class="text-sm text-gray-400">Source Files</div>
+                    <div class="overflow-auto flex-1 space-y-4">
+                        <!-- Error Info -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-gray-900 rounded-lg p-4">
+                                <span class="text-sm text-gray-400">Error Type</span>
+                                <div class="mt-1">
+                                    <span
+                                        class="px-2 py-1 rounded text-sm"
+                                        :class="{
+                                            'bg-purple-800 text-purple-200': validationDetailModal.error?.error_type === 'UNIQUENESS',
+                                            'bg-blue-800 text-blue-200': validationDetailModal.error?.error_type === 'NOT_NULL',
+                                            'bg-cyan-800 text-cyan-200': validationDetailModal.error?.error_type === 'DATA_TYPE',
+                                            'bg-pink-800 text-pink-200': validationDetailModal.error?.error_type === 'REFERENTIAL_INTEGRITY',
+                                            'bg-green-800 text-green-200': validationDetailModal.error?.error_type === 'FORMAT'
+                                        }"
+                                        x-text="validationDetailModal.error?.error_type"
+                                    ></span>
+                                </div>
+                            </div>
+                            <div class="bg-gray-900 rounded-lg p-4">
+                                <span class="text-sm text-gray-400">Affected Column(s)</span>
+                                <div class="mt-1 font-mono text-yellow-400" x-text="validationDetailModal.error?.failed_column"></div>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-900 rounded-lg p-4">
+                            <span class="text-sm text-gray-400">Error Count</span>
+                            <div class="mt-1 text-2xl font-bold text-red-400" x-text="validationDetailModal.error?.error_count"></div>
+                        </div>
+
+                        <div class="bg-gray-900 rounded-lg p-4">
+                            <span class="text-sm text-gray-400">Error Message</span>
+                            <div class="mt-1 text-gray-200" x-text="validationDetailModal.error?.error_message"></div>
+                        </div>
+
+                        <!-- Sample Values -->
+                        <div x-show="validationDetailModal.error?.sample_values?.length > 0" class="bg-gray-900 rounded-lg p-4">
+                            <span class="text-sm text-gray-400">Sample Values</span>
+                            <div class="mt-2 flex flex-wrap gap-2">
+                                <template x-for="val in validationDetailModal.error?.sample_values || []" :key="val">
+                                    <span class="px-2 py-1 bg-gray-700 text-yellow-400 rounded font-mono text-sm" x-text="val"></span>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- SQL Query -->
+                        <div class="bg-gray-900 rounded-lg p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm text-gray-400">SQL Query</span>
+                                <button
+                                    @click="copyToClipboard(validationDetailModal.error?.sql_query)"
+                                    class="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+                                >
+                                    Copy SQL
+                                </button>
+                            </div>
+                            <pre class="mt-1 text-xs text-cyan-400 bg-gray-800 p-3 rounded overflow-x-auto" x-text="validationDetailModal.error?.sql_query"></pre>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="mt-4 pt-4 border-t border-gray-700 flex justify-end">
+                        <button
+                            @click="validationDetailModal.show = false"
+                            class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded transition-colors"
+                        >
+                            Back to Errors
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        <!-- Pipeline Progress -->
+        <div x-show="pipelineState.status === 'running' || pipelineState.status === 'completed' || pipelineState.status === 'stopped'" class="bg-gray-800 rounded-lg p-6 mb-6 shadow-lg">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-semibold">Pipeline Execution</h2>
+                <span
+                    class="px-3 py-1 rounded-full text-sm font-medium"
+                    :class="{
+                        'bg-blue-600 animate-pulse': pipelineState.status === 'running' && !pipelineState.awaitingContinue,
+                        'bg-yellow-600': pipelineState.awaitingContinue,
+                        'bg-green-600': pipelineState.status === 'completed',
+                        'bg-red-600': pipelineState.status === 'error',
+                        'bg-gray-600': pipelineState.status === 'stopped'
+                    }"
+                >
+                    <span x-show="pipelineState.status === 'running' && !pipelineState.awaitingContinue">Running...</span>
+                    <span x-show="pipelineState.awaitingContinue">Awaiting Confirmation</span>
+                    <span x-show="pipelineState.status === 'completed'">Completed</span>
+                    <span x-show="pipelineState.status === 'error'">Error</span>
+                    <span x-show="pipelineState.status === 'stopped'">Stopped</span>
+                </span>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm text-gray-400">Current Step: <span class="text-white" x-text="pipelineState.currentStep || 'Initializing'"></span></span>
+                    <span class="text-sm" x-text="`${pipelineState.progress}%`"></span>
+                </div>
+                <div class="w-full bg-gray-700 rounded-full h-3">
+                    <div
+                        class="bg-blue-600 h-3 rounded-full transition-all duration-500"
+                        :style="`width: ${pipelineState.progress}%`"
+                    ></div>
+                </div>
+            </div>
+
+            <!-- Step Result -->
+            <div x-show="pipelineState.lastResult" class="bg-gray-900 rounded-lg p-4 mb-4">
+                <h3 class="text-lg font-semibold mb-2 text-cyan-400">
+                    Step Result: <span x-text="pipelineState.lastResult?.step || ''"></span>
+                    <span class="ml-2 text-xs px-2 py-1 rounded" :class="{
+                        'bg-green-600': pipelineState.lastResult?.status === 'completed',
+                        'bg-red-600': pipelineState.lastResult?.status === 'error',
+                        'bg-yellow-600': pipelineState.lastResult?.status === 'pending'
+                    }" x-text="pipelineState.lastResult?.status || ''"></span>
+                </h3>
+                <p class="text-gray-300 mb-3" x-text="pipelineState.lastResult?.message || ''"></p>
+
+                <!-- Details Summary -->
+                <div x-show="pipelineState.lastResult?.details" class="mb-3">
+                    <h4 class="text-sm font-semibold text-gray-400 mb-2">Summary:</h4>
+                    <pre class="bg-gray-800 p-3 rounded text-xs overflow-x-auto text-green-400" x-text="JSON.stringify(pipelineState.lastResult?.details, null, 2)"></pre>
                 </div>
 
-                <div class="bg-gray-700 rounded-lg p-4 text-center">
-                    <div class="text-3xl font-bold text-green-400" x-text="state.results.target_tables || 0"></div>
-                    <div class="text-sm text-gray-400">Target Tables</div>
+                <!-- View Mappings Button (for schema_mapping step) -->
+                <div x-show="pipelineState.lastResult?.schema_mapping_result" class="mb-3">
+                    <button
+                        @click="openMappingsModal()"
+                        class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded font-semibold transition-colors flex items-center gap-2"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
+                        </svg>
+                        View Mappings
+                    </button>
                 </div>
 
-                <div class="bg-gray-700 rounded-lg p-4 text-center">
-                    <div class="text-3xl font-bold text-purple-400" x-text="state.results.mappings || 0"></div>
-                    <div class="text-sm text-gray-400">Mappings</div>
+                <!-- View Validation Errors Button (for validation step) -->
+                <div x-show="pipelineState.lastResult?.validation_result_json" class="mb-3">
+                    <button
+                        @click="openValidationModal()"
+                        class="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded font-semibold transition-colors flex items-center gap-2"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                        View Validation Errors
+                        <span class="ml-1 px-2 py-0.5 bg-red-700 rounded-full text-xs" x-text="getValidationErrorCount() + ' errors'"></span>
+                    </button>
                 </div>
 
-                <div class="bg-gray-700 rounded-lg p-4 text-center">
-                    <div class="text-3xl font-bold text-yellow-400" x-text="state.results.issues_found || 0"></div>
-                    <div class="text-sm text-gray-400">Issues Found</div>
+                <!-- Full Result JSON (Collapsible with Copy button) -->
+                <div x-show="getResultJson()" class="mb-3" x-data="{ showResultJson: false, copied: false }">
+                    <div class="flex items-center gap-2 mb-2">
+                        <button
+                            @click="showResultJson = !showResultJson"
+                            class="text-sm font-semibold text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                        >
+                            <span x-text="showResultJson ? '▼' : '▶'"></span>
+                            <span>Full Result JSON</span>
+                            <span class="text-gray-500 text-xs">(click to expand)</span>
+                        </button>
+                        <button
+                            x-show="showResultJson"
+                            @click="const json = getResultJson(); if (json) { copyToClipboard(JSON.stringify(json, null, 2)); copied = true; setTimeout(() => copied = false, 2000); }"
+                            class="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded transition-colors flex items-center gap-1"
+                        >
+                            <svg x-show="!copied" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                            </svg>
+                            <svg x-show="copied" class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span x-text="copied ? 'Copied!' : 'Copy'"></span>
+                        </button>
+                    </div>
+                    <div x-show="showResultJson" x-transition>
+                        <pre class="bg-gray-800 p-3 rounded text-xs overflow-x-auto text-cyan-400 max-h-96 overflow-y-auto select-all" x-text="getResultJson() ? JSON.stringify(getResultJson(), null, 2) : ''"></pre>
+                    </div>
                 </div>
 
-                <div class="bg-gray-700 rounded-lg p-4 text-center">
-                    <div class="text-3xl font-bold text-cyan-400" x-text="state.results.sql_files || 0"></div>
-                    <div class="text-sm text-gray-400">SQL Files</div>
+                <!-- Next Action -->
+                <div x-show="pipelineState.lastResult?.next_action" class="text-sm text-yellow-400">
+                    Next: <span x-text="pipelineState.lastResult?.next_action"></span>
                 </div>
+            </div>
+
+            <!-- Continue/Stop Buttons -->
+            <div x-show="pipelineState.awaitingContinue" class="flex gap-3">
+                <button
+                    @click="continuePipeline()"
+                    class="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 rounded-md font-semibold transition-colors"
+                >
+                    Continue to Next Step
+                </button>
+                <button
+                    @click="stopPipeline()"
+                    class="px-6 py-3 bg-red-600 hover:bg-red-700 rounded-md font-semibold transition-colors"
+                >
+                    Stop Pipeline
+                </button>
+            </div>
+
+            <!-- Completed Message -->
+            <div x-show="pipelineState.status === 'completed'" class="text-center py-4">
+                <p class="text-green-400 text-lg font-semibold">Pipeline completed successfully!</p>
             </div>
         </div>
 
         <!-- Live Logs -->
         <div class="bg-gray-800 rounded-lg p-6 shadow-lg">
-            <h2 class="text-2xl font-semibold mb-4">📝 Live Logs</h2>
+            <h2 class="text-2xl font-semibold mb-4">Live Logs</h2>
 
-            <div class="bg-gray-900 rounded-md p-4 h-96 overflow-y-auto font-mono text-sm">
-                <template x-for="log in logs" :key="log.timestamp">
+            <div id="log-container" class="bg-gray-900 rounded-md p-4 h-96 overflow-y-auto font-mono text-sm">
+                <template x-for="(log, idx) in logs" :key="idx">
                     <div
                         class="mb-1"
                         :class="{
@@ -259,7 +922,7 @@
                 </template>
 
                 <div x-show="logs.length === 0" class="text-gray-500 text-center py-8">
-                    No logs yet. Click "Run Pipeline" to start.
+                    No logs yet. Click "Load Data" to start.
                 </div>
             </div>
         </div>
@@ -267,7 +930,6 @@
         <!-- Footer -->
         <div class="mt-8 text-center text-gray-500 text-sm">
             <p>Built with Google Agent Developer Kit (ADK) + Vertex AI Gemini 1.5 Pro</p>
-            <p class="mt-1">Works with ANY data - No hardcoding required! 🎉</p>
         </div>
     </div>
 
@@ -275,8 +937,8 @@
         function dashboardApp() {
             return {
                 config: {
-                    source_files: 'dataSets/Sample-DataSet-WorldBankData/SourceSchemaData/*.csv',
-                    target_ddls: 'dataSets/Sample-DataSet-WorldBankData/TargetSchema/*.sql',
+                    source_files: 'datasets-ccibt-hack25ww7-750/datasets/uc2-multi-agent-workflow-for-intelligent-data-integration/Sample-DataSet-WorldBankData/SourceSchemaData/*.csv',
+                    target_ddls: 'datasets-ccibt-hack25ww7-750/datasets/uc2-multi-agent-workflow-for-intelligent-data-integration/Sample-DataSet-WorldBankData/TargetSchema/*.sql',
                     mode: 'fix'
                 },
                 state: {
@@ -289,15 +951,49 @@
                 },
                 loadState: {
                     status: 'idle',  // idle, loading, loaded, error
-                    fileCount: 0,
-                    tableCount: 0,
-                    rowCount: 0,
+                    sessionId: null,
+                    stagingDataset: null,
+                    targetDataset: null,
+                    sourceCount: 0,
                     targetCount: 0,
-                    tables: []
+                    rowCount: 0,
+                    tables: [],
+                    targetTables: [],
+                    error: null
                 },
+                tableListModal: {
+                    show: false,
+                    type: 'staging'  // 'staging' or 'target'
+                },
+                mappingsModal: {
+                    show: false,
+                    activeTab: 'mappings'  // 'mappings' or 'issues'
+                },
+                columnMappingsModal: {
+                    show: false,
+                    mapping: null
+                },
+                validationModal: {
+                    show: false,
+                    filter: 'all'  // 'all', 'ERROR', 'WARNING'
+                },
+                validationDetailModal: {
+                    show: false,
+                    error: null
+                },
+                pipelineState: {
+                    status: 'idle',  // idle, running, completed, error, stopped
+                    currentStep: null,
+                    progress: 0,
+                    awaitingContinue: false,
+                    lastResult: null,
+                    error: null
+                },
+                pipelinePollInterval: null,
                 previewData: {
                     show: false,
                     tableName: '',
+                    datasetType: 'staging',  // 'staging' or 'target'
                     columns: [],
                     rows: [],
                     totalRows: 0,
@@ -306,6 +1002,7 @@
                 },
                 logs: [],
                 eventSource: null,
+                loadPollInterval: null,
 
                 init() {
                     this.fetchStatus();
@@ -318,8 +1015,64 @@
                         const data = await response.json();
                         this.state = data;
                         this.logs = data.logs || [];
+
+                        // Update session info if available
+                        if (data.session) {
+                            if (data.session.session_id) {
+                                this.loadState.sessionId = data.session.session_id;
+                                this.loadState.stagingDataset = data.session.staging_dataset;
+                                this.loadState.targetDataset = data.session.target_dataset;
+                                if (data.session.status === 'loaded') {
+                                    this.loadState.status = 'loaded';
+                                }
+                            }
+                        }
                     } catch (error) {
                         console.error('Failed to fetch status:', error);
+                    }
+                },
+
+                async fetchLoadStatus() {
+                    try {
+                        // Fetch load status
+                        const response = await fetch('/api/load/status');
+                        const data = await response.json();
+
+                        this.loadState.status = data.status;
+                        this.loadState.sessionId = data.session_id;
+                        this.loadState.stagingDataset = data.staging_dataset;
+                        this.loadState.targetDataset = data.target_dataset;
+                        this.loadState.tables = data.tables || [];
+                        this.loadState.targetTables = data.target_tables || [];
+                        this.loadState.sourceCount = data.source_count || 0;
+                        this.loadState.targetCount = data.target_count || 0;
+                        this.loadState.rowCount = data.row_count || 0;
+                        this.loadState.error = data.error || null;
+
+                        // Also fetch logs from status endpoint
+                        const statusResponse = await fetch('/api/status');
+                        const statusData = await statusResponse.json();
+                        this.logs = statusData.logs || [];
+
+                        // Auto-scroll logs
+                        setTimeout(() => {
+                            const logContainer = document.getElementById('log-container');
+                            if (logContainer) {
+                                logContainer.scrollTop = logContainer.scrollHeight;
+                            }
+                        }, 100);
+
+                        // Stop polling when load is complete or error
+                        if (data.status === 'loaded' || data.status === 'error') {
+                            if (this.loadPollInterval) {
+                                clearInterval(this.loadPollInterval);
+                                this.loadPollInterval = null;
+                            }
+                            // Force a final status update to ensure UI reflects completion
+                            this.loadState.status = data.status;
+                        }
+                    } catch (error) {
+                        console.error('Failed to fetch load status:', error);
                     }
                 },
 
@@ -333,7 +1086,7 @@
                                 this.logs.push(data);
                                 // Auto-scroll to bottom
                                 setTimeout(() => {
-                                    const logContainer = document.querySelector('.overflow-y-auto');
+                                    const logContainer = document.getElementById('log-container');
                                     if (logContainer) {
                                         logContainer.scrollTop = logContainer.scrollHeight;
                                     }
@@ -348,7 +1101,7 @@
                         console.error('EventSource error:', error);
                     };
 
-                    // Poll status every 2 seconds
+                    // Poll status every 2 seconds when running
                     setInterval(() => {
                         if (this.state.status === 'running') {
                             this.fetchStatus();
@@ -364,8 +1117,6 @@
                                 'Content-Type': 'application/json'
                             },
                             body: JSON.stringify({
-                                source_files: [this.config.source_files],
-                                target_ddls: [this.config.target_ddls],
                                 mode: this.config.mode
                             })
                         });
@@ -373,9 +1124,14 @@
                         const data = await response.json();
 
                         if (response.ok) {
-                            this.logs = [];
-                            this.state.status = 'running';
-                            this.state.progress = 0;
+                            this.pipelineState.status = 'running';
+                            this.pipelineState.progress = 0;
+                            this.pipelineState.currentStep = data.current_step;
+
+                            // Start polling for pipeline status
+                            this.pipelinePollInterval = setInterval(() => {
+                                this.fetchPipelineStatus();
+                            }, 1000);
                         } else {
                             alert(`Error: ${data.error}`);
                         }
@@ -385,8 +1141,112 @@
                     }
                 },
 
+                async fetchPipelineStatus() {
+                    try {
+                        const response = await fetch('/api/pipeline/status');
+                        const data = await response.json();
+
+                        this.pipelineState.status = data.status;
+                        this.pipelineState.currentStep = data.current_step;
+                        this.pipelineState.progress = data.progress || 0;
+                        this.pipelineState.awaitingContinue = data.awaiting_continue || false;
+                        this.pipelineState.lastResult = data.last_result;
+                        this.pipelineState.error = data.error;
+
+                        // Also fetch logs
+                        const statusResponse = await fetch('/api/status');
+                        const statusData = await statusResponse.json();
+                        this.logs = statusData.logs || [];
+
+                        // Auto-scroll logs
+                        setTimeout(() => {
+                            const logContainer = document.getElementById('log-container');
+                            if (logContainer) {
+                                logContainer.scrollTop = logContainer.scrollHeight;
+                            }
+                        }, 100);
+
+                        // Stop polling when completed, error, or stopped
+                        if (data.status === 'completed' || data.status === 'error' || data.status === 'stopped') {
+                            if (this.pipelinePollInterval) {
+                                clearInterval(this.pipelinePollInterval);
+                                this.pipelinePollInterval = null;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Failed to fetch pipeline status:', error);
+                    }
+                },
+
+                async continuePipeline() {
+                    try {
+                        const response = await fetch('/api/pipeline/continue', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ action: 'continue' })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            this.pipelineState.awaitingContinue = false;
+                            this.pipelineState.currentStep = data.current_step;
+
+                            // Resume polling if not already running
+                            if (!this.pipelinePollInterval) {
+                                this.pipelinePollInterval = setInterval(() => {
+                                    this.fetchPipelineStatus();
+                                }, 1000);
+                            }
+                        } else {
+                            alert(`Error: ${data.error}`);
+                        }
+                    } catch (error) {
+                        console.error('Failed to continue pipeline:', error);
+                        alert('Failed to continue pipeline');
+                    }
+                },
+
+                async stopPipeline() {
+                    try {
+                        const response = await fetch('/api/pipeline/continue', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ action: 'stop' })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            this.pipelineState.status = 'stopped';
+                            this.pipelineState.awaitingContinue = false;
+
+                            if (this.pipelinePollInterval) {
+                                clearInterval(this.pipelinePollInterval);
+                                this.pipelinePollInterval = null;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Failed to stop pipeline:', error);
+                    }
+                },
+
                 async clearState() {
                     try {
+                        // Stop any polling
+                        if (this.loadPollInterval) {
+                            clearInterval(this.loadPollInterval);
+                            this.loadPollInterval = null;
+                        }
+                        if (this.pipelinePollInterval) {
+                            clearInterval(this.pipelinePollInterval);
+                            this.pipelinePollInterval = null;
+                        }
+
                         await fetch('/api/clear');
                         this.logs = [];
                         this.state = {
@@ -399,15 +1259,48 @@
                         };
                         this.loadState = {
                             status: 'idle',
-                            fileCount: 0,
-                            tableCount: 0,
-                            rowCount: 0,
+                            sessionId: null,
+                            stagingDataset: null,
+                            targetDataset: null,
+                            sourceCount: 0,
                             targetCount: 0,
-                            tables: []
+                            rowCount: 0,
+                            tables: [],
+                            targetTables: [],
+                            error: null
+                        };
+                        this.tableListModal = {
+                            show: false,
+                            type: 'staging'
+                        };
+                        this.mappingsModal = {
+                            show: false,
+                            activeTab: 'mappings'
+                        };
+                        this.columnMappingsModal = {
+                            show: false,
+                            mapping: null
+                        };
+                        this.validationModal = {
+                            show: false,
+                            filter: 'all'
+                        };
+                        this.validationDetailModal = {
+                            show: false,
+                            error: null
+                        };
+                        this.pipelineState = {
+                            status: 'idle',
+                            currentStep: null,
+                            progress: 0,
+                            awaitingContinue: false,
+                            lastResult: null,
+                            error: null
                         };
                         this.previewData = {
                             show: false,
                             tableName: '',
+                            datasetType: 'staging',
                             columns: [],
                             rows: [],
                             totalRows: 0,
@@ -422,11 +1315,7 @@
                 async loadData() {
                     try {
                         this.loadState.status = 'loading';
-                        this.logs.push({
-                            timestamp: new Date().toLocaleTimeString(),
-                            level: 'info',
-                            message: '📥 Starting data load into staging tables...'
-                        });
+                        this.logs = []; // Clear previous logs
 
                         const response = await fetch('/api/load', {
                             method: 'POST',
@@ -442,24 +1331,19 @@
                         const data = await response.json();
 
                         if (response.ok) {
-                            this.loadState.status = 'loaded';
-                            this.loadState.fileCount = data.file_count || 0;
-                            this.loadState.tableCount = data.table_count || 0;
-                            this.loadState.rowCount = data.row_count || 0;
-                            this.loadState.targetCount = data.target_count || 0;
-                            this.loadState.tables = data.tables || [];
+                            // Fetch status immediately to show initial logs
+                            await this.fetchLoadStatus();
 
-                            this.logs.push({
-                                timestamp: new Date().toLocaleTimeString(),
-                                level: 'success',
-                                message: `✅ Data loaded: ${data.file_count} files, ${data.row_count} rows`
-                            });
+                            // Start polling for load status
+                            this.loadPollInterval = setInterval(() => {
+                                this.fetchLoadStatus();
+                            }, 500); // Poll every 500ms for faster updates
                         } else {
                             this.loadState.status = 'error';
                             this.logs.push({
                                 timestamp: new Date().toLocaleTimeString(),
                                 level: 'error',
-                                message: `❌ Load failed: ${data.error}`
+                                message: `Load failed: ${data.error}`
                             });
                         }
                     } catch (error) {
@@ -467,13 +1351,14 @@
                         this.logs.push({
                             timestamp: new Date().toLocaleTimeString(),
                             level: 'error',
-                            message: `❌ Load failed: ${error.message}`
+                            message: `Load failed: ${error.message}`
                         });
                     }
                 },
 
-                async previewTable(tableName) {
+                async previewTable(tableName, datasetType = 'staging') {
                     this.previewData.tableName = tableName;
+                    this.previewData.datasetType = datasetType;
                     this.previewData.page = 1;
                     this.previewData.show = true;
                     await this.loadPreviewPage(1);
@@ -483,7 +1368,8 @@
                     if (page < 1) return;
 
                     try {
-                        const response = await fetch(`/api/preview/${this.previewData.tableName}?page=${page}&page_size=${this.previewData.pageSize}`);
+                        const datasetType = this.previewData.datasetType || 'staging';
+                        const response = await fetch(`/api/preview/${this.previewData.tableName}?page=${page}&page_size=${this.previewData.pageSize}&dataset_type=${datasetType}`);
                         const data = await response.json();
 
                         if (response.ok) {
@@ -491,10 +1377,154 @@
                             this.previewData.rows = data.rows || [];
                             this.previewData.totalRows = data.total_rows || 0;
                             this.previewData.page = page;
+                        } else {
+                            console.error('Preview error:', data.error);
+                            this.previewData.columns = [];
+                            this.previewData.rows = [];
+                            this.previewData.totalRows = 0;
                         }
                     } catch (error) {
                         console.error('Failed to load preview:', error);
                     }
+                },
+
+                // Schema Mapping Modal Functions
+                openMappingsModal() {
+                    // Only open if we have mappings data
+                    if (!this.pipelineState.lastResult?.schema_mapping_result) {
+                        console.warn('No schema mapping result available');
+                        return;
+                    }
+                    this.mappingsModal.show = true;
+                    this.mappingsModal.activeTab = 'mappings';
+                },
+
+                getMappings() {
+                    const result = this.pipelineState.lastResult?.schema_mapping_result;
+                    if (!result || !result.mapping || !result.mapping.mappings) {
+                        return [];
+                    }
+                    return result.mapping.mappings;
+                },
+
+                getMappingsCount() {
+                    return this.getMappings().length;
+                },
+
+                getIssuesCount() {
+                    const unmapped = this.getUnmappedTables().length;
+                    const withIssues = this.getMappingsWithIssues().length;
+                    return unmapped + withIssues;
+                },
+
+                getUnmappedTables() {
+                    return this.getMappings().filter(m =>
+                        m.source_table === 'UNMAPPED' || m.match_confidence < 0.2
+                    );
+                },
+
+                getMappingsWithIssues() {
+                    return this.getMappings().filter(m =>
+                        m.source_table !== 'UNMAPPED' &&
+                        m.match_confidence >= 0.2 &&
+                        (
+                            (m.unmapped_source_columns && m.unmapped_source_columns.length > 0) ||
+                            (m.unmapped_target_columns && m.unmapped_target_columns.length > 0) ||
+                            (m.mapping_errors && m.mapping_errors.length > 0)
+                        )
+                    );
+                },
+
+                getTableName(fullName) {
+                    if (!fullName) return '';
+                    // Extract just the table name from fully qualified name (project.dataset.table)
+                    const parts = fullName.split('.');
+                    return parts[parts.length - 1] || fullName;
+                },
+
+                selectMapping(mapping) {
+                    this.columnMappingsModal.mapping = mapping;
+                    this.columnMappingsModal.show = true;
+                },
+
+                copyToClipboard(text) {
+                    if (!text) {
+                        console.warn('Nothing to copy');
+                        return;
+                    }
+                    if (navigator.clipboard && window.isSecureContext) {
+                        navigator.clipboard.writeText(text);
+                    } else {
+                        // Fallback for non-secure contexts
+                        const textarea = document.createElement('textarea');
+                        textarea.value = text;
+                        textarea.style.position = 'fixed';
+                        textarea.style.left = '-999999px';
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        try {
+                            document.execCommand('copy');
+                        } catch (err) {
+                            console.error('Failed to copy:', err);
+                        }
+                        document.body.removeChild(textarea);
+                    }
+                },
+
+                getResultJson() {
+                    // Safely get the result JSON for display/copy
+                    const lastResult = this.pipelineState.lastResult;
+                    if (!lastResult) return null;
+                    return lastResult.schema_mapping_result || lastResult.validation_result_json || lastResult.result_json || null;
+                },
+
+                // Validation Modal Functions
+                openValidationModal() {
+                    // Only open if we have validation data
+                    if (!this.pipelineState.lastResult?.validation_result_json) {
+                        console.warn('No validation result available');
+                        return;
+                    }
+                    this.validationModal.show = true;
+                    this.validationModal.filter = 'all';
+                },
+
+                getValidationErrors() {
+                    const result = this.pipelineState.lastResult?.validation_result_json;
+                    if (!result || !result.validation_errors) {
+                        return [];
+                    }
+                    return result.validation_errors;
+                },
+
+                getValidationSummary() {
+                    const result = this.pipelineState.lastResult?.validation_result_json;
+                    if (!result || !result.validation_summary) {
+                        return null;
+                    }
+                    return result.validation_summary;
+                },
+
+                getFilteredValidationErrors() {
+                    const errors = this.getValidationErrors();
+                    if (this.validationModal.filter === 'all') {
+                        return errors;
+                    }
+                    return errors.filter(e => e.severity === this.validationModal.filter);
+                },
+
+                selectValidationError(error) {
+                    this.validationDetailModal.error = error;
+                    this.validationDetailModal.show = true;
+                },
+
+                getValidationErrorCount() {
+                    const summary = this.getValidationSummary();
+                    if (summary) {
+                        return summary.total_errors || 0;
+                    }
+                    // Fallback: count from errors array
+                    return this.getValidationErrors().filter(e => e.severity === 'ERROR').length;
                 }
             };
         }
