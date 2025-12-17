@@ -299,11 +299,17 @@ def generate_schema_mapping(source_dataset: str, target_dataset: str, mode: str 
                     "confidence": result["mapping"].get("metadata", {}).get("confidence", "unknown"),
                     "mode": mode
                 },
+                "schema_mapping_result": {
+                    "status": "success",
+                    "mapping": result["mapping"],
+                    "metadata": result["mapping"].get("metadata", {})
+                },
                 "next_steps": [
                     f"Use validate_data() to validate the staging data",
                     f"Use get_mapping('{mapping_id}') to retrieve the full mapping",
                     f"Use get_workflow_status('{workflow_id}') to check progress"
-                ]
+                ],
+                "requires_confirmation": True
             }, indent=2)
         else:
             return json.dumps({
@@ -409,12 +415,22 @@ def validate_data(mapping_id: str, mode: str = "REPORT", workflow_id: str = None
                     "total_validations": result.get("total_validations", 0),
                     "total_errors": result.get("total_errors", 0)
                 },
+                "validation_result_json": {
+                    "status": "success",
+                    "run_id": result.get("run_id"),
+                    "tables_validated": result.get("tables_validated", 0),
+                    "total_validations": result.get("total_validations", 0),
+                    "total_errors": result.get("total_errors", 0),
+                    "validation_details": result.get("validation_details", []),
+                    "errors": result.get("errors", [])
+                },
                 "message": f"Validation completed. Found {result.get('total_errors', 0)} errors.",
                 "next_steps": [
                     f"Query staging_errors table to see details: run_id = '{result.get('run_id')}'",
                     f"Use get_validation_results('{validation_id}') for full results",
                     f"Use get_workflow_status('{workflow_id}') to see complete workflow"
-                ]
+                ],
+                "requires_confirmation": True
             }, indent=2)
         else:
             return json.dumps({
