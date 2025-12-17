@@ -11,6 +11,10 @@ google-cloud-aiplatform>=1.38.0
 # Vertex AI
 vertexai>=1.38.0
 
-# Note: Also depends on schema_mapping and validation agents
-# Ensure those agents' dependencies are also installed
+# Note: Also depends on other agents in the project
+# Ensure those agents' dependencies are also installed:
+# - agents.schema_mapping
+# - agents.validation
+# - agents.staging_loader_agent
+# - agents.etl_agent
 

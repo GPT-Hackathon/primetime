@@ -35,6 +35,8 @@ _workflow_state = {}
 _staging_loads = {}
 _schema_mappings = {}
 _validation_results = {}
+_etl_sql_scripts = {}
+_etl_execution_results = {}
 
 
 # --- Staging Loader Tools (Delegates to Staging Loader Agent) ---
@@ -680,6 +682,228 @@ def list_mappings() -> str:
     }, indent=2)
 
 
+# --- ETL Agent Tools (Delegates to ETL Agent) ---
+
+def generate_etl_sql(mapping_id: str, workflow_id: str = None) -> str:
+    """
+    Generate ETL SQL scripts from a schema mapping.
+    
+    Takes the JSON mapping from the schema mapping agent and generates
+    executable SQL INSERT statements to load data from staging to target tables.
+
+    Args:
+        mapping_id: The mapping ID to use for SQL generation
+        workflow_id: Optional workflow ID to track this ETL generation
+
+    Returns:
+        JSON string with generated SQL scripts
+    """
+    try:
+        # Check if mapping exists
+        if mapping_id not in _schema_mappings:
+            return json.dumps({
+                "status": "error",
+                "message": f"Mapping '{mapping_id}' not found",
+                "available_mappings": list(_schema_mappings.keys())
+            }, indent=2)
+        
+        # Import the ETL SQL generation function
+        from agents.etl_agent.tools.gen_etl_sql import generate_etl_sql_from_json_string
+        
+        print(f"🔄 Orchestrator: Calling ETL Agent to generate SQL...")
+        print(f"   Mapping ID: {mapping_id}")
+        
+        # Set environment variable for ETL agent to use
+        os.environ["GCP_PROJECT_ID"] = project_id
+        
+        # Get the mapping data
+        mapping_data = _schema_mappings[mapping_id]
+        
+        # Convert mapping to JSON string for ETL agent
+        mapping_json = json.dumps(mapping_data.get("mapping", {}))
+        
+        # Generate SQL scripts
+        sql_scripts = generate_etl_sql_from_json_string(mapping_json)
+        
+        # Store the generated SQL
+        etl_id = f"{mapping_id}_etl"
+        _etl_sql_scripts[etl_id] = {
+            "mapping_id": mapping_id,
+            "sql_scripts": sql_scripts,
+            "generated_at": datetime.utcnow().isoformat(),
+            "workflow_id": workflow_id
+        }
+        
+        # Update workflow state
+        if workflow_id and workflow_id in _workflow_state:
+            _workflow_state[workflow_id]["steps"].append({
+                "step": "etl_sql_generation",
+                "status": "completed",
+                "etl_id": etl_id,
+                "timestamp": datetime.utcnow().isoformat()
+            })
+        
+        print(f"✅ Orchestrator: ETL SQL generated successfully!")
+        print(f"   ETL ID: {etl_id}")
+        
+        return json.dumps({
+            "status": "success",
+            "etl_id": etl_id,
+            "mapping_id": mapping_id,
+            "sql_scripts": sql_scripts,
+            "message": "ETL SQL scripts generated successfully. Review the SQL before executing."
+        }, indent=2)
+            
+    except Exception as e:
+        error_msg = f"Error generating ETL SQL: {str(e)}"
+        print(f"❌ Orchestrator: {error_msg}")
+        
+        return json.dumps({
+            "status": "error",
+            "message": error_msg
+        }, indent=2)
+
+
+def execute_etl_sql(etl_id: str, target_dataset: str, workflow_id: str = None) -> str:
+    """
+    Execute ETL SQL scripts in BigQuery.
+    
+    **IMPORTANT**: This will actually load data into your target tables.
+    Review the SQL scripts first before executing!
+
+    Args:
+        etl_id: The ETL ID (from generate_etl_sql) to execute
+        target_dataset: The target BigQuery dataset to load data into
+        workflow_id: Optional workflow ID to track this execution
+
+    Returns:
+        JSON string with execution results
+    """
+    try:
+        # Check if ETL script exists
+        if etl_id not in _etl_sql_scripts:
+            return json.dumps({
+                "status": "error",
+                "message": f"ETL script '{etl_id}' not found",
+                "available_etl_scripts": list(_etl_sql_scripts.keys())
+            }, indent=2)
+        
+        # Import the SQL execution function
+        from agents.etl_agent.tools.gen_etl_sql import execute_sql
+        
+        print(f"🔄 Orchestrator: Calling ETL Agent to execute SQL...")
+        print(f"   ETL ID: {etl_id}")
+        print(f"   Target Dataset: {target_dataset}")
+        
+        # Set environment variable for ETL agent to use
+        os.environ["GCP_PROJECT_ID"] = project_id
+        
+        # Get the SQL scripts
+        etl_data = _etl_sql_scripts[etl_id]
+        sql_scripts = etl_data["sql_scripts"]
+        
+        # Execute the SQL
+        result = execute_sql(
+            query_sql=sql_scripts,
+            dataset_name=target_dataset
+        )
+        
+        # Store execution results
+        execution_id = f"{etl_id}_execution"
+        _etl_execution_results[execution_id] = {
+            "etl_id": etl_id,
+            "target_dataset": target_dataset,
+            "result": result,
+            "executed_at": datetime.utcnow().isoformat(),
+            "workflow_id": workflow_id
+        }
+        
+        # Update workflow state
+        if workflow_id and workflow_id in _workflow_state:
+            _workflow_state[workflow_id]["steps"].append({
+                "step": "etl_execution",
+                "status": "completed",
+                "execution_id": execution_id,
+                "timestamp": datetime.utcnow().isoformat()
+            })
+        
+        print(f"✅ Orchestrator: ETL SQL executed successfully!")
+        print(f"   Execution ID: {execution_id}")
+        
+        return json.dumps({
+            "status": "success",
+            "execution_id": execution_id,
+            "etl_id": etl_id,
+            "target_dataset": target_dataset,
+            "result": result,
+            "message": "ETL SQL executed successfully. Data loaded into target tables."
+        }, indent=2)
+            
+    except Exception as e:
+        error_msg = f"Error executing ETL SQL: {str(e)}"
+        print(f"❌ Orchestrator: {error_msg}")
+        
+        return json.dumps({
+            "status": "error",
+            "message": error_msg
+        }, indent=2)
+
+
+def get_etl_sql(etl_id: str) -> str:
+    """
+    Retrieve generated ETL SQL scripts by ID.
+
+    Args:
+        etl_id: The ETL ID to retrieve
+
+    Returns:
+        JSON string with ETL SQL scripts
+    """
+    if etl_id not in _etl_sql_scripts:
+        return json.dumps({
+            "status": "error",
+            "message": f"ETL script '{etl_id}' not found",
+            "available_etl_scripts": list(_etl_sql_scripts.keys())
+        }, indent=2)
+    
+    return json.dumps({
+        "status": "success",
+        "etl_id": etl_id,
+        "etl_data": _etl_sql_scripts[etl_id]
+    }, indent=2)
+
+
+def list_etl_scripts() -> str:
+    """
+    List all ETL SQL scripts generated in this session.
+
+    Returns:
+        JSON string with list of ETL scripts
+    """
+    if not _etl_sql_scripts:
+        return json.dumps({
+            "status": "success",
+            "etl_scripts": [],
+            "count": 0,
+            "message": "No ETL scripts yet. Use generate_etl_sql() to create one."
+        }, indent=2)
+    
+    scripts_summary = []
+    for etl_id, etl_data in _etl_sql_scripts.items():
+        scripts_summary.append({
+            "etl_id": etl_id,
+            "mapping_id": etl_data.get("mapping_id"),
+            "generated_at": etl_data.get("generated_at"),
+            "workflow_id": etl_data.get("workflow_id")
+        })
+    
+    return json.dumps({
+        "status": "success",
+        "etl_scripts": scripts_summary,
+        "count": len(scripts_summary)
+    }, indent=2)
+
+
 # --- Define the Orchestration Agent ---
 
 root_agent = Agent(
@@ -693,7 +917,7 @@ You manage end-to-end data integration workflows by coordinating:
 1. **Staging Loader Agent**: Loads CSV data from GCS to BigQuery staging tables
 2. **Schema Mapping Agent**: Generates intelligent schema mappings between datasets
 3. **Validation Agent**: Validates data quality based on schema mappings
-4. **Future Agents**: Extensible to integrate with ETL, transformation, and other agents
+4. **ETL Agent**: Generates and executes SQL scripts to load data from staging to target tables
 
 **Your Capabilities:**
 
@@ -711,6 +935,12 @@ You manage end-to-end data integration workflows by coordinating:
 **Data Validation (STAGE 3):**
 - `validate_data(mapping_id, mode, workflow_id)`: Validate data using a mapping
 - `get_validation_results(validation_id)`: Get detailed validation results
+
+**ETL Generation & Execution (STAGE 4):**
+- `generate_etl_sql(mapping_id, workflow_id)`: Generate SQL scripts from schema mapping
+- `execute_etl_sql(etl_id, target_dataset, workflow_id)`: Execute ETL SQL (after review!)
+- `get_etl_sql(etl_id)`: Retrieve generated SQL scripts
+- `list_etl_scripts()`: See all generated ETL scripts
 
 **Workflow Management:**
 - `run_complete_workflow(source_dataset, target_dataset, validation_mode)`: Run end-to-end workflow
@@ -733,8 +963,11 @@ When a user wants more control:
 2. Then `generate_schema_mapping()` to map schemas
 3. Review the mapping with the user
 4. Then run `validate_data()` with the mapping_id
-5. Track progress with workflow_id
-6. Provide detailed results at each step
+5. Then `generate_etl_sql()` to create SQL scripts
+6. **Important**: Present the SQL to the user for review before executing
+7. Only execute with `execute_etl_sql()` after user confirms
+8. Track progress with workflow_id
+9. Provide detailed results at each step
 
 **Workflow Guidance:**
 - Always explain what each step does
@@ -767,6 +1000,20 @@ You: [Call generate_schema_mapping]
 User: Validate it
 You: [Call validate_data with the mapping_id]
      Validation complete. Found Y errors in Z tables.
+     Would you like to:
+     1. Generate ETL SQL scripts
+     2. Review validation details
+     
+User: Generate ETL SQL
+You: [Call generate_etl_sql]
+     Generated SQL scripts for loading data.
+     **IMPORTANT**: Please review the SQL before executing.
+     [Show SQL preview]
+     Would you like me to execute this SQL?
+     
+User: Yes, execute it
+You: [Call execute_etl_sql]
+     Data loaded successfully into target tables!
 ```
 
 **Workflow 3: Status Tracking**
@@ -787,6 +1034,8 @@ You: [Call get_workflow_status]
 - Help users understand the data quality findings
 - Be proactive in suggesting the best workflow for their needs
 - Coordinate between agents seamlessly - users shouldn't need to know which agent does what
+- **CRITICAL**: Always show SQL to users before executing (security best practice)
+- Never auto-execute SQL without user confirmation
 
 **Error Handling:**
 - If schema mapping fails, explain the error and suggest fixes
@@ -808,6 +1057,11 @@ You are the single point of contact for data integration workflows. Make the pro
         # Validation tools (STAGE 3)
         validate_data,
         get_validation_results,
+        # ETL tools (STAGE 4)
+        generate_etl_sql,
+        execute_etl_sql,
+        get_etl_sql,
+        list_etl_scripts,
         # Workflow management tools
         run_complete_workflow,
         get_workflow_status,

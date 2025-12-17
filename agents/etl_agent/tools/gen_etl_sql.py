@@ -279,8 +279,8 @@ def execute_sql(query_sql: str, dataset_name: str, hardcoded_dataset_to_replace:
     Returns:
         A string containing the query results.
     """
-    # 1. Read PROJECT_ID from environment
-    project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
+    # 1. Read PROJECT_ID from environment (consistent with other agents)
+    project_id = os.getenv("GCP_PROJECT_ID", os.getenv("GOOGLE_CLOUD_PROJECT"))
     if not project_id:
         # As a fallback, let the google-cloud client try to infer the project
         try:
@@ -293,8 +293,8 @@ def execute_sql(query_sql: str, dataset_name: str, hardcoded_dataset_to_replace:
 
     if not project_id:
         raise ValueError(
-            "PROJECT_ID environment variable not set. "
-            "Set `GOOGLE_CLOUD_PROJECT`, or run `gcloud config set project YOUR_PROJECT_ID` "
+            "GCP_PROJECT_ID or GOOGLE_CLOUD_PROJECT environment variable not set. "
+            "Set one of these environment variables, or run `gcloud config set project YOUR_PROJECT_ID` "
             "or configure Application Default Credentials."
         )
 

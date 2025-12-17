@@ -1,5 +1,5 @@
 from google.adk.agents.llm_agent import Agent
-from etl_agent.tools.gen_etl_sql import generate_etl_sql_from_json_string, execute_sql
+from .tools.gen_etl_sql import generate_etl_sql_from_json_string, execute_sql
 
 root_agent = Agent(
     model="gemini-2.5-pro",

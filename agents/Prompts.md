@@ -1,3 +1,12 @@
+
+In bucket datasets-ccibt-hack25ww7-750 can you please load the file datasets/uc2-multi-agent-workflow-for-intelligent-data-integration/Sample-DataSet-WorldBankData/SourceSchemaData/source_co2_emissions.csv to dataset worldbank_staging_dataset
+In bucket datasets-ccibt-hack25ww7-750 can you please load the file datasets/uc2-multi-agent-workflow-for-intelligent-data-integration/Sample-DataSet-WorldBankData/SourceSchemaData/source_countries.csv to dataset worldbank_staging_dataset
+In bucket datasets-ccibt-hack25ww7-750 can you please load the file datasets/uc2-multi-agent-workflow-for-intelligent-data-integration/Sample-DataSet-WorldBankData/SourceSchemaData/source_gdp.csv to dataset worldbank_staging_dataset
+In bucket datasets-ccibt-hack25ww7-750 can you please load the file datasets/uc2-multi-agent-workflow-for-intelligent-data-integration/Sample-DataSet-WorldBankData/SourceSchemaData/source_indicators_meta.csv to dataset worldbank_staging_dataset
+In bucket datasets-ccibt-hack25ww7-750 can you please load the file datasets/uc2-multi-agent-workflow-for-intelligent-data-integration/Sample-DataSet-WorldBankData/SourceSchemaData/source_life_expectancy.csv to dataset worldbank_staging_dataset
+In bucket datasets-ccibt-hack25ww7-750 can you please load the file datasets/uc2-multi-agent-workflow-for-intelligent-data-integration/Sample-DataSet-WorldBankData/SourceSchemaData/source_poverty_headcount.csv to dataset worldbank_staging_dataset
+In bucket datasets-ccibt-hack25ww7-750 can you please load the file datasets/uc2-multi-agent-workflow-for-intelligent-data-integration/Sample-DataSet-WorldBankData/SourceSchemaData/source_primary_enrollment.csv to dataset worldbank_staging_dataset
+
 Create REPORT for source_dataset: "worldbank_staging_dataset", target_dataset: "worldbank_target_dataset" Keep in mind that life expectation, poverty, headcount and primary enrollment map to fact_indicator values.
 
 ```
