@@ -156,7 +156,9 @@ def generate_select_expression(col_map: Dict[str, Any]) -> str:
         expression = transformation
     # Handle unmapped columns with default values
     elif source_col == "UNMAPPED":
-        if "at" in target_col or "date" in target_col:
+        if "source" in target_col:
+            expression = f"'etl' /* Default source for unmapped column */"
+        elif "_at" in target_col or "at_" in target_col or "date" in target_col:
             expression = f"CURRENT_TIMESTAMP() /* Default for unmapped column */"
         else:
             expression = f"'Default' /* Default for unmapped column */"
