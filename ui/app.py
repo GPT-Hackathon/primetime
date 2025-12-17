@@ -1900,6 +1900,253 @@ def stream():
     return Response(event_stream(), mimetype='text/event-stream')
 
 
+@app.route('/api/bq/query', methods=['POST'])
+def bq_query():
+    """Execute BigQuery queries using natural language via the BigQuery agent."""
+    try:
+        data = request.json
+        project_id = data.get('project_id', '').strip()
+        dataset_name = data.get('dataset_name', '').strip()
+        user_query = data.get('query', '').strip()
+
+        if not dataset_name:
+            return jsonify({'error': 'Dataset name is required'}), 400
+
+        if not user_query:
+            return jsonify({'error': 'Query is required'}), 400
+
+        # Set environment variables for the agent
+        if project_id:
+            os.environ['GOOGLE_CLOUD_PROJECT'] = project_id
+
+        # Import the BigQuery agent
+        from bigquery_adk_agent.agent import root_agent
+        from google.adk.runners import InMemoryRunner
+        import vertexai
+
+        print(f"🔍 BigQuery Agent - Processing: {user_query}")
+        print(f"   Dataset: {dataset_name}")
+        print(f"   Project: {project_id}")
+
+        # Initialize Vertex AI
+        try:
+            vertexai.init(
+                project=project_id or os.getenv("GOOGLE_CLOUD_PROJECT"),
+                location=os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+            )
+        except Exception as e:
+            print(f"⚠️ Vertex AI init warning: {e}")
+
+        # Create a runner for the agent
+        runner = InMemoryRunner(agent=root_agent)
+
+        # Build the prompt with context
+        prompt_text = f"""I need help with this BigQuery dataset:
+- Project: {project_id or 'use default'}
+- Dataset: {dataset_name}
+
+User request: {user_query}
+
+Please help me with this request. If you need to query or visualize data, use the dataset information provided above."""
+
+
+        # Run the agent synchronously
+        import asyncio
+
+        # Use a consistent session ID based on dataset so agent remembers context
+        # This allows follow-up questions to maintain context
+        session_id = f"bq_session_{abs(hash(f'{project_id}_{dataset_name}'))}"
+
+        async def run_agent():
+            # Use run_debug which handles session creation automatically
+            events = await runner.run_debug(
+                user_messages=[prompt_text],
+                user_id="bq_user",
+                session_id=session_id,
+                verbose=False
+            )
+            return events
+
+        # Execute the agent
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            events = loop.run_until_complete(run_agent())
+            # Close the runner to free resources
+            loop.run_until_complete(runner.close())
+
+            # Wait for all pending tasks to complete before closing loop
+            pending = asyncio.all_tasks(loop)
+            for task in pending:
+                if not task.done():
+                    task.cancel()
+                    try:
+                        loop.run_until_complete(task)
+                    except asyncio.CancelledError:
+                        pass
+        finally:
+            loop.close()
+
+        # Extract the response from events
+        response_text = None
+        tool_results = []
+
+        for event in events:
+            if hasattr(event, 'content') and event.content:
+                if hasattr(event.content, 'parts'):
+                    for part in event.content.parts:
+                        if hasattr(part, 'text') and part.text:
+                            response_text = part.text
+                        elif hasattr(part, 'function_response'):
+                            # Tool was called, extract the result
+                            tool_results.append(part.function_response)
+
+        print(f"✅ BigQuery Agent - Response received")
+        print(f"   Tool results count: {len(tool_results)}")
+
+        # Parse the response for structured data
+        result = {
+            'message': response_text or 'No response from agent',
+            'raw_response': response_text
+        }
+
+        # Try to extract JSON from tool results or response
+        for idx, tool_result in enumerate(tool_results):
+            print(f"   Processing tool result {idx + 1}/{len(tool_results)}")
+            if hasattr(tool_result, 'response') and tool_result.response:
+                try:
+                    # Handle both dict and string responses
+                    if isinstance(tool_result.response, dict):
+                        tool_data = tool_result.response
+                    elif isinstance(tool_result.response, str):
+                        tool_data = json.loads(tool_result.response)
+                    else:
+                        continue
+
+                    # Debug: Print the full response structure (truncated if too long)
+                    response_preview = json.dumps(tool_data, indent=2)
+                    if len(response_preview) > 500:
+                        # For long responses (like base64), show structure without the full content
+                        preview_data = {}
+                        for key, value in tool_data.items():
+                            if isinstance(value, str) and len(value) > 100:
+                                preview_data[key] = f"<string length={len(value)}>"
+                            else:
+                                preview_data[key] = value
+                        response_preview = json.dumps(preview_data, indent=2)
+                    print(f"   📋 Tool response structure:\n{response_preview}")
+
+                    # Check if data is nested inside a 'result' key
+                    if 'result' in tool_data and isinstance(tool_data['result'], (dict, str)):
+                        print(f"   🔍 Found 'result' key, extracting nested data...")
+                        if isinstance(tool_data['result'], str):
+                            try:
+                                tool_data = json.loads(tool_data['result'])
+                                print(f"   📋 Parsed result string to JSON")
+                            except json.JSONDecodeError:
+                                print(f"   ⚠️ Could not parse result as JSON")
+                                pass
+                        else:
+                            tool_data = tool_data['result']
+                            print(f"   📋 Using result dict directly")
+
+                    # Check for image data
+                    if 'image_base64' in tool_data:
+                        print(f"   ✅ Found image_base64 in tool result (length: {len(tool_data['image_base64'])})")
+                        result['image_base64'] = tool_data['image_base64']
+                        result['graph_type'] = tool_data.get('graph_type', 'unknown')
+                        result['rows_plotted'] = tool_data.get('rows_plotted', 0)
+                    else:
+                        print(f"   ⚠️ No image_base64 in tool result. Keys: {list(tool_data.keys())}")
+
+                    # Check for query results
+                    if 'results' in tool_data:
+                        result['results'] = tool_data['results']
+                        result['row_count'] = tool_data.get('row_count', len(tool_data['results']))
+
+                    # Include status and message
+                    if 'status' in tool_data:
+                        result['status'] = tool_data['status']
+                    if 'message' in tool_data and not result.get('message'):
+                        result['message'] = tool_data['message']
+
+                except (json.JSONDecodeError, AttributeError, TypeError) as e:
+                    print(f"⚠️ Error parsing tool result: {e}")
+                    pass
+
+        # Also try to extract JSON from the response text
+        if response_text:
+            import re
+            json_match = re.search(r'\{[\s\S]*\}', response_text)
+            if json_match:
+                try:
+                    embedded_json = json.loads(json_match.group())
+                    if 'image_base64' in embedded_json:
+                        result['image_base64'] = embedded_json['image_base64']
+                    if 'results' in embedded_json:
+                        result['results'] = embedded_json['results']
+                except json.JSONDecodeError:
+                    pass
+
+        return jsonify(result)
+
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"❌ BigQuery query error: {error_trace}")
+        log_event(f"BigQuery query error: {str(e)}", 'error')
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/bq/clear-context', methods=['POST'])
+def bq_clear_context():
+    """Clear BigQuery agent session context to start fresh."""
+    try:
+        data = request.json
+        project_id = data.get('project_id', '').strip()
+        dataset_name = data.get('dataset_name', '').strip()
+
+        if not dataset_name:
+            return jsonify({'error': 'Dataset name is required', 'success': False}), 400
+
+        # Calculate the session ID (same logic as in bq_query)
+        session_id = f"bq_session_{abs(hash(f'{project_id}_{dataset_name}'))}"
+
+        # Import the session service to delete the session
+        from google.adk.runners import InMemoryRunner
+        from bigquery_adk_agent.agent import root_agent
+
+        runner = InMemoryRunner(agent=root_agent)
+
+        # Run async cleanup
+        import asyncio
+
+        async def clear_session():
+            try:
+                # Delete the session if it exists
+                if hasattr(runner, '_session_service'):
+                    await runner._session_service.delete_session(user_id="bq_user", session_id=session_id)
+                    print(f"✅ Cleared session: {session_id}")
+            except Exception as e:
+                print(f"⚠️ Session may not exist or already cleared: {e}")
+            finally:
+                await runner.close()
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            loop.run_until_complete(clear_session())
+        finally:
+            loop.close()
+
+        log_event(f"BigQuery context cleared for dataset: {dataset_name}", 'info')
+        return jsonify({'success': True, 'message': 'Context cleared successfully'})
+
+    except Exception as e:
+        print(f"❌ Error clearing context: {str(e)}")
+        return jsonify({'error': str(e), 'success': False}), 500
+
+
 @app.route('/api/clear')
 def clear_state():
     """Clear pipeline state and delete session datasets."""

@@ -1,4 +1,16 @@
 
+## Big query
+
+ccibt-hack25ww7-750
+target_dataset_fcd377a3
+
+
+Show me the top 10 countries by GDP
+
+Can you show me the top 10 countries by GDP as a bar chart?
+
+## Main
+
 In bucket datasets-ccibt-hack25ww7-750 can you please load the file datasets/uc2-multi-agent-workflow-for-intelligent-data-integration/Sample-DataSet-WorldBankData/SourceSchemaData/source_co2_emissions.csv to dataset worldbank_staging_dataset
 In bucket datasets-ccibt-hack25ww7-750 can you please load the file datasets/uc2-multi-agent-workflow-for-intelligent-data-integration/Sample-DataSet-WorldBankData/SourceSchemaData/source_countries.csv to dataset worldbank_staging_dataset
 In bucket datasets-ccibt-hack25ww7-750 can you please load the file datasets/uc2-multi-agent-workflow-for-intelligent-data-integration/Sample-DataSet-WorldBankData/SourceSchemaData/source_gdp.csv to dataset worldbank_staging_dataset

@@ -89,15 +89,15 @@ When generate_graph() returns successfully, the tool returns:
   "rows_plotted": 10
 }
 
-You MUST display the chart using markdown image syntax with the COMPLETE base64 string:
+**IMPORTANT**: The UI will automatically extract and display the image_base64 field from the tool response.
+You should tell the user about the chart, but the actual image will be displayed by the UI.
 
-"Here is your [graph_type] chart showing [description]:
+Your response should be:
 
-![Chart](data:image/png;base64,<COMPLETE_IMAGE_BASE64_STRING>)
+"I've generated a [graph_type] chart showing [description]. The chart displays [rows_plotted] data points from your query."
 
-The chart shows [rows_plotted] data points."
-
-IMPORTANT: Include the ENTIRE image_base64 string - do not truncate it!
+The image_base64 data from the generate_graph() tool will be automatically extracted and displayed by the UI.
+DO NOT try to include the base64 string in your text response - it's too long and the UI handles it automatically.
 
 
 Be helpful and explain what you're doing at each step!""",

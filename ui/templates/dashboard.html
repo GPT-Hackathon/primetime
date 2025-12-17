@@ -14,6 +14,31 @@
             <h1 class="text-4xl font-bold mb-2">GPT : Gen Prime Time</h1>
         </div>
 
+        <!-- Tabs Navigation -->
+        <div class="mb-6">
+            <div class="border-b border-gray-700">
+                <nav class="-mb-px flex space-x-8">
+                    <button
+                        @click="currentTab = 'pipeline'"
+                        :class="currentTab === 'pipeline' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'"
+                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors"
+                    >
+                        Pipeline
+                    </button>
+                    <button
+                        @click="currentTab = 'bqquery'"
+                        :class="currentTab === 'bqquery' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'"
+                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors"
+                    >
+                        BigQuery Query & Charts
+                    </button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Pipeline Tab -->
+        <div x-show="currentTab === 'pipeline'" x-transition>
+
         <!-- Configuration Form -->
         <div class="bg-gray-800 rounded-lg p-6 mb-6 shadow-lg">
             <h2 class="text-2xl font-semibold mb-4">Pipeline Configuration</h2>
@@ -255,6 +280,116 @@
                     </div>
                 </div>
             </div>
+
+        </div>
+        <!-- End Pipeline Tab -->
+
+        <!-- BigQuery Query Tab -->
+        <div x-show="currentTab === 'bqquery'" x-transition class="space-y-6">
+            <div class="bg-gray-800 rounded-lg p-6 shadow-lg">
+                <h2 class="text-2xl font-semibold mb-4">BigQuery Query & Visualization</h2>
+
+                <!-- Input Fields -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Project ID</label>
+                        <input
+                            type="text"
+                            x-model="bqQuery.projectId"
+                            placeholder="ccibt-hack25ww7-750"
+                            class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Dataset Name</label>
+                        <input
+                            type="text"
+                            x-model="bqQuery.datasetName"
+                            placeholder="target_dataset_fcd377a3"
+                            class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                    </div>
+                </div>
+
+                <!-- Natural Language Query Box -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2">Ask a Question or Request a Chart</label>
+                    <textarea
+                        x-model="bqQuery.naturalLanguageQuery"
+                        placeholder="Examples:&#10;- Show me the top 10 countries by GDP&#10;- Create a bar chart of sales by region&#10;- What tables are available?&#10;- Count records in countries table"
+                        rows="4"
+                        class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                    ></textarea>
+                </div>
+
+                <div class="flex gap-2">
+                    <button
+                        @click="runBQQuery()"
+                        :disabled="bqQuery.running || !bqQuery.datasetName"
+                        class="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-md font-semibold transition-colors"
+                    >
+                        <span x-show="!bqQuery.running">Run Query</span>
+                        <span x-show="bqQuery.running">Running...</span>
+                    </button>
+                    <button
+                        @click="clearBQQuery()"
+                        class="px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-md font-semibold transition-colors"
+                    >
+                        Clear Results
+                    </button>
+                    <button
+                        @click="clearBQContext()"
+                        class="px-6 py-3 bg-yellow-600 hover:bg-yellow-700 rounded-md font-semibold transition-colors"
+                        title="Clear the agent's memory - use this to start a completely fresh conversation"
+                    >
+                        Clear Context
+                    </button>
+                </div>
+                <p class="text-xs text-gray-400 mt-2">💡 The agent remembers your previous queries in this session. Use "Clear Context" to start fresh.</p>
+            </div>
+
+            <!-- Results Area -->
+            <div x-show="bqQuery.result" x-transition class="bg-gray-800 rounded-lg p-6 shadow-lg">
+                <h3 class="text-xl font-semibold mb-4">Results</h3>
+
+                <!-- Chart Display -->
+                <div x-show="bqQuery.chartImage" class="mb-6">
+                    <img :src="'data:image/png;base64,' + bqQuery.chartImage" alt="Chart" class="max-w-full h-auto rounded border border-gray-600">
+                </div>
+
+                <!-- Query Results Table -->
+                <div x-show="bqQuery.queryResults && bqQuery.queryResults.length > 0" class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-700">
+                            <tr>
+                                <template x-for="(value, key) in bqQuery.queryResults[0]" :key="key">
+                                    <th class="px-4 py-3 text-left font-semibold" x-text="key"></th>
+                                </template>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="(row, idx) in bqQuery.queryResults.slice(0, 100)" :key="idx">
+                                <tr class="border-t border-gray-700 hover:bg-gray-700">
+                                    <template x-for="(value, key) in row" :key="key">
+                                        <td class="px-4 py-2" x-text="value"></td>
+                                    </template>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                    <p x-show="bqQuery.queryResults.length > 100" class="text-sm text-gray-400 mt-2">
+                        Showing first 100 of <span x-text="bqQuery.queryResults.length"></span> rows
+                    </p>
+                </div>
+
+                <!-- Text Results -->
+                <div x-show="bqQuery.textResult" class="whitespace-pre-wrap font-mono text-sm bg-gray-900 p-4 rounded border border-gray-700" x-text="bqQuery.textResult"></div>
+
+                <!-- Error Display -->
+                <div x-show="bqQuery.error" class="bg-red-900 border border-red-700 rounded p-4 text-red-100" x-text="bqQuery.error"></div>
+            </div>
+        </div>
+        <!-- End BigQuery Query Tab -->
 
             <!-- Table Preview Modal -->
             <div x-show="previewData.show" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="previewData.show = false">
@@ -955,10 +1090,22 @@
     <script>
         function dashboardApp() {
             return {
+                currentTab: 'pipeline',  // 'pipeline' or 'bqquery'
                 config: {
                     source_files: 'datasets-ccibt-hack25ww7-750/datasets/uc2-multi-agent-workflow-for-intelligent-data-integration/Sample-DataSet-WorldBankData/SourceSchemaData/*.csv',
                     target_ddls: 'datasets-ccibt-hack25ww7-750/datasets/uc2-multi-agent-workflow-for-intelligent-data-integration/Sample-DataSet-WorldBankData/TargetSchema/*.sql',
                     mode: 'fix'
+                },
+                bqQuery: {
+                    projectId: '',
+                    datasetName: '',
+                    naturalLanguageQuery: '',
+                    running: false,
+                    result: null,
+                    chartImage: null,
+                    queryResults: null,
+                    textResult: null,
+                    error: null
                 },
                 state: {
                     status: 'idle',
@@ -1584,6 +1731,94 @@
                     }
                     // Fallback: count from errors array
                     return this.getValidationErrors().filter(e => e.severity === 'ERROR').length;
+                },
+
+                // BigQuery Query Functions
+                async runBQQuery() {
+                    this.bqQuery.running = true;
+                    this.bqQuery.error = null;
+                    this.bqQuery.result = null;
+                    this.bqQuery.chartImage = null;
+                    this.bqQuery.queryResults = null;
+                    this.bqQuery.textResult = null;
+
+                    try {
+                        const response = await fetch('/api/bq/query', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                project_id: this.bqQuery.projectId,
+                                dataset_name: this.bqQuery.datasetName,
+                                query: this.bqQuery.naturalLanguageQuery
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (data.error) {
+                            this.bqQuery.error = data.error;
+                        } else {
+                            this.bqQuery.result = data;
+
+                            // Check for chart image
+                            if (data.image_base64) {
+                                this.bqQuery.chartImage = data.image_base64;
+                            }
+
+                            // Check for query results
+                            if (data.results && Array.isArray(data.results)) {
+                                this.bqQuery.queryResults = data.results;
+                            }
+
+                            // Check for text result
+                            if (data.message) {
+                                this.bqQuery.textResult = data.message;
+                            }
+                        }
+                    } catch (error) {
+                        this.bqQuery.error = 'Error: ' + error.message;
+                    } finally {
+                        this.bqQuery.running = false;
+                    }
+                },
+
+                clearBQQuery() {
+                    this.bqQuery.naturalLanguageQuery = '';
+                    this.bqQuery.result = null;
+                    this.bqQuery.chartImage = null;
+                    this.bqQuery.queryResults = null;
+                    this.bqQuery.textResult = null;
+                    this.bqQuery.error = null;
+                },
+
+                async clearBQContext() {
+                    if (!this.bqQuery.datasetName) {
+                        alert('Please enter a dataset name first');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch('/api/bq/clear-context', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                project_id: this.bqQuery.projectId,
+                                dataset_name: this.bqQuery.datasetName
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            // Also clear local results
+                            this.clearBQQuery();
+                            alert('Context cleared! The agent will start fresh with your next query.');
+                        } else {
+                            alert('Error clearing context: ' + (data.error || 'Unknown error'));
+                        }
+                    } catch (error) {
+                        alert('Error: ' + error.message);
+                    }
                 }
             };
         }
