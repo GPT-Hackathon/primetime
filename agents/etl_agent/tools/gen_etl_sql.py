@@ -182,7 +182,7 @@ def generate_sql_from_rules(rules: Dict[str, Any]) -> str:
     # A more robust system might use a graph to resolve dependencies.
     processing_order = ['dim_', 'fact_', 'agg_']
 
-    all_mappings = rules['mapping']['mappings']
+    all_mappings = rules['mappings']
 
     for prefix in processing_order:
         for mapping in all_mappings:

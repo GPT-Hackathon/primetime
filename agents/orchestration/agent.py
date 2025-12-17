@@ -720,8 +720,10 @@ def generate_etl_sql(mapping_id: str, workflow_id: str = None) -> str:
         mapping_data = _schema_mappings[mapping_id]
         
         # Convert mapping to JSON string for ETL agent
-        mapping_json = json.dumps(mapping_data.get("mapping", {}))
-        
+        # ETL agent expects the full structure with "mapping" key
+        mapping_json = json.dumps(mapping_data)
+        print(f"   mapping_json: {mapping_json}")
+
         # Generate SQL scripts
         sql_scripts = generate_etl_sql_from_json_string(mapping_json)
         
