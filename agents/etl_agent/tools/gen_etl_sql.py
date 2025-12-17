@@ -148,6 +148,7 @@ def generate_select_expression(col_map: Dict[str, Any]) -> str:
         A string for the SELECT column expression (e.g., "source_col AS target_col").
     """
     source_col = col_map.get("source_column", "UNMAPPED")
+    source_typ = col_map.get("source_type", "")
     target_col = col_map["target_column"]
     transformation = col_map.get("transformation")
 
@@ -155,6 +156,10 @@ def generate_select_expression(col_map: Dict[str, Any]) -> str:
     if transformation:
         expression = transformation
     # Handle unmapped columns with default values
+    elif source_col == "GENERATED":
+        if source_typ == "EXPRESSION" and "DEFAULT" in transformation:
+            # From transformation remove the prefix DEFAULT: and use the remaining as the expression
+            expression = transformation.replace("DEFAULT:", "")
     elif source_col == "UNMAPPED":
         if "source" in target_col:
             expression = f"'etl' /* Default source for unmapped column */"

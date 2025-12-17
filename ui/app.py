@@ -196,27 +196,39 @@ def delete_dataset(client, project_id, dataset_name):
 
 
 def load_csv_from_gcs_to_bigquery(client, project_id, dataset_name, gcs_uri):
-    """Load a CSV file from GCS into BigQuery table."""
+    """Load a CSV file from GCS into BigQuery table using staging_loader_agent."""
+    # Parse GCS URI: gs://bucket/path/to/file.csv
+    if not gcs_uri.startswith('gs://'):
+        raise ValueError(f"Invalid GCS URI: {gcs_uri}")
+
+    parts = gcs_uri[5:].split('/', 1)  # Remove 'gs://' and split
+    bucket_name = parts[0]
+    file_path = parts[1] if len(parts) > 1 else ''
+
     # Extract table name from GCS path
     file_name = gcs_uri.split('/')[-1]
     table_name = file_name.replace('.csv', '')
-    table_id = f"{project_id}.{dataset_name}.{table_name}"
 
-    job_config = bigquery.LoadJobConfig(
-        source_format=bigquery.SourceFormat.CSV,
-        skip_leading_rows=1,
-        autodetect=True,
-        write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
+    # Import and use the staging_loader_agent's tool
+    # This will automatically find and use schema files if available
+    from agents.staging_loader_agent.tools.staging_loader_tools import load_csv_to_bigquery_from_gcs
+
+    # Call the staging loader tool
+    result_msg = load_csv_to_bigquery_from_gcs(
+        dataset_name=dataset_name,
+        bucket_name=bucket_name,
+        file_path=file_path
     )
 
-    load_job = client.load_table_from_uri(gcs_uri, table_id, job_config=job_config)
-    load_job.result()  # Wait for job to complete
-
+    # Get table info to return consistent result
+    table_id = f"{project_id}.{dataset_name}.{table_name}"
     table = client.get_table(table_id)
+
     return {
         'table_name': table_name,
         'rows': table.num_rows,
-        'columns': len(table.schema)
+        'columns': len(table.schema),
+        'load_result': result_msg
     }
 
 
@@ -1508,13 +1520,21 @@ def parse_agent_response(response_text):
             elif 'valid' in step.lower():
                 pipeline_state['progress'] = 70
                 pipeline_state['current_step'] = 'validation'
-            elif 'etl' in step.lower() or 'transform' in step.lower():
+            elif 'execution' in step.lower() or 'execute' in step.lower():
+                # ETL execution is the final step before completion
+                pipeline_state['progress'] = 95
+                pipeline_state['current_step'] = 'etl_execute'
+            elif 'etl' in step.lower() or 'transform' in step.lower() or 'sql' in step.lower():
+                # Stay in ETL step for any ETL-related actions (generation, saving, etc.)
                 pipeline_state['progress'] = 90
                 pipeline_state['current_step'] = 'etl'
-            elif 'complete' in step.lower() or 'finish' in step.lower():
+            elif step.lower() == 'pipeline_complete' or step.lower() == 'workflow_complete':
+                # Only mark as complete if explicitly pipeline/workflow complete
                 pipeline_state['progress'] = 100
                 pipeline_state['current_step'] = 'completed'
                 pipeline_state['status'] = 'completed'
+            # Don't automatically complete based on 'complete' or 'finish' in step name
+            # as individual actions (like "etl_script_saved") may have status="completed"
 
             return result
         else:
@@ -1566,13 +1586,20 @@ def continue_pipeline():
 
         if current_step == 'schema_mapping':
             next_step = 'validation'
+
+            # Extract mapping_id from previous result
+            mapping_id = last_result.get('mapping_id', '')
+            if not mapping_id:
+                # Try to extract from schema_mapping_result
+                mapping_id = last_result.get('schema_mapping_result', {}).get('mapping_id', '')
+
             next_prompt = f"""Continue with Step 2: Data Validation
 
 Mode: {mode}
 Using the schema mapping from the previous step, validate the data quality in the staging dataset {session_state.get('staging_dataset')}.
 
 Call validate_data with:
-- mapping_id: Use the mapping_id from the previous step
+- mapping_id: "{mapping_id}"
 - mode: "{mode}"
 
 Check for:
@@ -1618,13 +1645,23 @@ Include the COMPLETE validation results in the "validation_result_json" field wi
 
         elif current_step == 'validation':
             next_step = 'etl'
-            next_prompt = f"""Continue with Step 3: ETL Transformation
+
+            # Extract mapping_id from validation result or earlier result
+            mapping_id = last_result.get('mapping_id', '')
+            validation_id = last_result.get('validation_id', '')
+
+            next_prompt = f"""Continue with Step 3: ETL SQL Generation
 
 Mode: {mode}
-Based on the schema mapping and validation results, proceed with the ETL transformation:
-1. Apply data cleansing rules based on validation errors
-2. Transform data to match target schema
-3. Load data into target dataset {session_state.get('target_dataset')}
+Based on the schema mapping and validation results, generate ETL SQL scripts:
+
+Call generate_etl_sql with:
+- mapping_id: "{mapping_id}"
+
+This will generate SQL INSERT statements to load data from staging dataset {session_state.get('staging_dataset')} to target dataset {session_state.get('target_dataset')}.
+
+**CRITICAL**: Return the COMPLETE SQL scripts in your response. Do not truncate or summarize the SQL.
+The sql_scripts field must contain the full SQL code for all tables.
 
 IMPORTANT: Provide results in JSON format with the following structure:
 {{
@@ -1639,6 +1676,45 @@ IMPORTANT: Provide results in JSON format with the following structure:
 
 Include the COMPLETE ETL results in the "result_json" field."""
             pipeline_state['current_step'] = 'etl'
+
+        elif current_step == 'etl':
+            # After ETL generation/save, offer to execute
+            next_step = 'etl_execute'
+
+            # Extract etl_id or script_id from previous result
+            etl_id = last_result.get('etl_id', '')
+            script_id = last_result.get('script_id', '')
+
+            next_prompt = f"""Continue with Step 4: Execute ETL SQL
+
+Mode: {mode}
+The ETL SQL scripts have been generated/saved. Now execute them to load data into the target dataset.
+
+Context:
+- Target dataset: {session_state.get('target_dataset')}
+- ETL ID: {etl_id}
+- Script ID: {script_id}
+
+Call execute_etl_sql with:
+- etl_id: "{etl_id}" (if generated)
+  OR
+- Use execute_saved_etl_script with script_id: "{script_id}" (if custom saved)
+- target_dataset: "{session_state.get('target_dataset')}"
+
+This will execute the SQL and load data into the target tables.
+
+IMPORTANT: Provide results in JSON format:
+{{
+    "step": "etl_execution",
+    "status": "completed" | "error",
+    "message": "<summary of execution results>",
+    "details": {{ <execution stats> }},
+    "result_json": {{ <execution results> }},
+    "next_action": "Pipeline complete",
+    "requires_confirmation": false
+}}
+"""
+            pipeline_state['current_step'] = 'etl_execute'
 
         else:
             # Pipeline complete
@@ -1726,14 +1802,20 @@ IMPORTANT: Provide results in JSON format with schema_mapping_result containing 
 """
         elif step == 'validation':
             last_result = pipeline_state.get('last_result', {})
-            mapping_id = last_result.get('details', {}).get('mapping_id', '')
+            # Extract mapping_id from top level or details
+            mapping_id = last_result.get('mapping_id', '')
+            if not mapping_id:
+                mapping_id = last_result.get('details', {}).get('mapping_id', '')
+
             rerun_prompt = f"""Re-run Step 2: Data Validation with the following additional instructions from the user:
 
 USER INSTRUCTIONS: {user_instructions}
 
 Please re-validate the data in staging dataset {staging_dataset} using the existing mapping.
-mapping_id: {mapping_id}
-Mode: {mode}
+
+Call validate_data with:
+- mapping_id: "{mapping_id}"
+- mode: "{mode}"
 
 Take into account the user's instructions when performing validation.
 
@@ -1741,17 +1823,42 @@ IMPORTANT: Provide results in JSON format with validation_result_json containing
 """
         elif step == 'etl':
             last_result = pipeline_state.get('last_result', {})
-            mapping_id = last_result.get('details', {}).get('mapping_id', '')
-            rerun_prompt = f"""Re-run Step 3: ETL SQL Generation with the following additional instructions from the user:
+            # Extract mapping_id and etl_id from previous result
+            mapping_id = last_result.get('mapping_id', '')
+            if not mapping_id:
+                mapping_id = last_result.get('details', {}).get('mapping_id', '')
+            etl_id = last_result.get('etl_id', '')
+
+            rerun_prompt = f"""Step 3: ETL SQL - Handle user request with the following instructions:
 
 USER INSTRUCTIONS: {user_instructions}
 
-Please regenerate the ETL SQL scripts for loading data from {staging_dataset} to {target_dataset}.
-mapping_id: {mapping_id}
+Context:
+- Staging dataset: {staging_dataset}
+- Target dataset: {target_dataset}
+- Mapping ID: {mapping_id}
+- ETL ID (if available): {etl_id}
 
-Take into account the user's instructions when generating the SQL.
+The user may want to:
+1. Regenerate SQL scripts - use generate_etl_sql(mapping_id="{mapping_id}")
+2. Save custom SQL scripts - use save_etl_sql_script(sql_script="...", script_id="...")
+3. Modify and regenerate - first generate, then save with modifications
+4. Execute SQL - use execute_etl_sql(etl_id="...", target_dataset="{target_dataset}")
 
-IMPORTANT: Provide results in JSON format with the SQL scripts.
+**CRITICAL**: 
+- If saving scripts, return the complete script in your response
+- Always set "step": "etl_sql_action" or "etl_transformation" in your JSON response
+- Never use "step": "completed" - that marks the entire pipeline as done
+- Set "status": "completed" to indicate THIS action completed, but use proper step name
+
+IMPORTANT: Provide results in JSON format:
+{{
+    "step": "etl_sql_action",  // Use this for ETL-related actions
+    "status": "completed",     // Status of THIS action
+    "message": "...",
+    "details": {{}},
+    "result_json": {{}}
+}}
 """
         else:
             rerun_prompt = f"""Re-run the current step with the following additional instructions from the user:

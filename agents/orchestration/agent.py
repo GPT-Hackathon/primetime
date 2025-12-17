@@ -687,11 +687,14 @@ def get_validation_results(validation_id: str) -> str:
     """
     Retrieve validation results by ID.
 
+    Returns validation results in a structured format compatible with UI requirements,
+    including validation summary and detailed error information.
+
     Args:
         validation_id: The validation ID to retrieve
 
     Returns:
-        JSON string with validation results
+        JSON string with validation results in UI-compatible format
     """
     if validation_id not in _validation_results:
         return json.dumps({
@@ -700,10 +703,51 @@ def get_validation_results(validation_id: str) -> str:
             "available_validations": list(_validation_results.keys())
         }, indent=2)
     
+    results = _validation_results[validation_id]
+
+    # Format validation results for UI compatibility
+    # Extract validation details and errors
+    validation_details = results.get("validation_details", [])
+    errors = results.get("errors", [])
+
+    # Build validation_errors array in the format UI expects
+    validation_errors = []
+    for error in errors:
+        validation_errors.append({
+            "table_name": error.get("table_name", ""),
+            "error_type": error.get("error_type", "UNKNOWN"),
+            "failed_column": error.get("failed_column", ""),
+            "error_count": error.get("error_count", 0),
+            "severity": error.get("severity", "ERROR"),
+            "sql_query": error.get("sql_query", ""),
+            "error_message": error.get("error_message", ""),
+            "sample_values": error.get("sample_values", [])
+        })
+
     return json.dumps({
-        "status": "success",
+        "step": "data_validation",
+        "status": "completed" if results.get("status") == "success" else "error",
+        "message": f"Validation completed. Found {results.get('total_errors', 0)} errors across {results.get('tables_validated', 0)} tables.",
         "validation_id": validation_id,
-        "results": _validation_results[validation_id]
+        "details": {
+            "tables_validated": results.get("tables_validated", 0),
+            "total_validations": results.get("total_validations", 0),
+            "total_errors": results.get("total_errors", 0),
+            "run_id": results.get("run_id", "")
+        },
+        "validation_result_json": {
+            "validation_summary": {
+                "total_tables_validated": results.get("tables_validated", 0),
+                "total_errors": results.get("total_errors", 0),
+                "total_warnings": 0,  # Can be extracted if available
+                "tables_with_errors": len([e for e in validation_errors if e["severity"] == "ERROR"]),
+                "validation_timestamp": results.get("timestamp", datetime.utcnow().isoformat())
+            },
+            "validation_errors": validation_errors,
+            "validation_details": validation_details
+        },
+        "next_action": "Review errors and proceed with ETL generation" if results.get("total_errors", 0) > 0 else "Proceed with ETL generation",
+        "requires_confirmation": True
     }, indent=2)
 
 
@@ -806,12 +850,30 @@ def generate_etl_sql(mapping_id: str, workflow_id: str = None) -> str:
         print(f"✅ Orchestrator: ETL SQL generated successfully!")
         print(f"   ETL ID: {etl_id}")
         
+        # Parse SQL scripts to count tables
+        table_count = sql_scripts.count("INSERT INTO") if isinstance(sql_scripts, str) else 0
+
         return json.dumps({
+            "step": "etl_transformation",
             "status": "success",
             "etl_id": etl_id,
             "mapping_id": mapping_id,
+            "message": f"ETL SQL scripts generated successfully for {table_count} tables. Review the SQL before executing.",
+            "details": {
+                "etl_id": etl_id,
+                "tables_count": table_count,
+                "generated_at": _etl_sql_scripts[etl_id]["generated_at"]
+            },
             "sql_scripts": sql_scripts,
-            "message": "ETL SQL scripts generated successfully. Review the SQL before executing."
+            "result_json": {
+                "etl_id": etl_id,
+                "sql_scripts": sql_scripts,
+                "tables": table_count,
+                "status": "generated",
+                "note": "SQL scripts generated. Use execute_etl_sql to run them."
+            },
+            "next_action": "Review SQL and execute with execute_etl_sql()",
+            "requires_confirmation": True
         }, indent=2)
             
     except Exception as e:
@@ -890,13 +952,30 @@ def execute_etl_sql(etl_id: str, target_dataset: str, workflow_id: str = None) -
         print(f"✅ Orchestrator: ETL SQL executed successfully!")
         print(f"   Execution ID: {execution_id}")
         
+        # Parse result to extract row counts if available
+        # The result from execute_sql should contain execution details
         return json.dumps({
-            "status": "success",
+            "step": "etl_execution",  # Use etl_execution not etl_transformation
+            "status": "completed",
             "execution_id": execution_id,
             "etl_id": etl_id,
             "target_dataset": target_dataset,
-            "result": result,
-            "message": "ETL SQL executed successfully. Data loaded into target tables."
+            "message": "ETL SQL executed successfully. Data loaded into target tables.",
+            "details": {
+                "execution_id": execution_id,
+                "etl_id": etl_id,
+                "target_dataset": target_dataset,
+                "executed_at": _etl_execution_results[execution_id]["executed_at"]
+            },
+            "result_json": {
+                "execution_id": execution_id,
+                "status": "completed",
+                "target_dataset": target_dataset,
+                "execution_result": result,
+                "message": "Data successfully loaded into target tables"
+            },
+            "next_action": "Pipeline complete",
+            "requires_confirmation": False
         }, indent=2)
             
     except Exception as e:
@@ -990,12 +1069,32 @@ def save_etl_sql_script(sql_script: str, script_id: str, workflow_id: str = None
         os.environ["GCP_PROJECT_ID"] = project_id
         
         # Call the ETL agent's save function
-        result = save_etl_sql(sql_script, script_id)
-        
+        raw_result = save_etl_sql(sql_script, script_id)
+
         print(f"✅ Orchestrator: SQL script saved successfully!")
         
-        return result
-            
+        # Parse the raw result and wrap it in UI-compatible format
+        try:
+            result_data = json.loads(raw_result) if isinstance(raw_result, str) else raw_result
+        except:
+            result_data = {"message": raw_result}
+
+        # Return in UI-compatible format
+        return json.dumps({
+            "step": "etl_sql_action",  # Use etl_sql_action, not "completed"
+            "status": "success",
+            "script_id": script_id,
+            "message": f"ETL SQL script '{script_id}' saved successfully",
+            "details": {
+                "script_id": script_id,
+                "action": "save_script",
+                "saved_at": datetime.utcnow().isoformat()
+            },
+            "result_json": result_data,
+            "next_action": "Review script or execute with execute_saved_etl_script()",
+            "requires_confirmation": True
+        }, indent=2)
+
     except Exception as e:
         error_msg = f"Error saving ETL SQL script: {str(e)}"
         print(f"❌ Orchestrator: {error_msg}")
@@ -1188,9 +1287,16 @@ You manage end-to-end data integration workflows using tools for:
 **Data Validation (STAGE 3):**
 - `validate_data(mapping_id, mode, workflow_id)`: Validate data using a mapping
 - `get_validation_results(validation_id)`: Get detailed validation results
+  * Returns results in UI-compatible JSON format with validation_result_json structure
+  * Includes validation_summary, validation_errors array, and detailed error information
+  * Ready to present to users without transformation
 
 **ETL Generation & Execution (STAGE 4):**
 - `generate_etl_sql(mapping_id, workflow_id)`: Generate SQL scripts from schema mapping
+  * Returns JSON with sql_scripts field containing the generated SQL
+  * IMPORTANT: When using this tool, ALWAYS include the returned sql_scripts in your response
+  * The sql_scripts field contains the actual SQL - don't truncate or omit it
+  * Present the SQL to users for review before execution
 - `execute_etl_sql(etl_id, target_dataset, workflow_id)`: Execute generated ETL SQL (after review!)
 - `get_etl_sql(etl_id)`: Retrieve generated SQL scripts
 - `list_etl_scripts()`: See all generated ETL scripts
@@ -1264,8 +1370,9 @@ You: [Call validate_data with the mapping_id]
 User: Generate ETL SQL
 You: [Call generate_etl_sql]
      Generated SQL scripts for loading data.
-     **IMPORTANT**: Please review the SQL before executing.
-     [Show SQL preview]
+     **IMPORTANT**: The generate_etl_sql tool returns the full SQL in the response.
+     You MUST include the sql_scripts field in your JSON response - don't truncate it!
+     Return the complete tool response including all SQL scripts.
      Would you like me to:
      1. Execute this SQL
      2. Save it for you to modify
@@ -1308,6 +1415,9 @@ You: [Call get_workflow_status]
 - Coordinate between agents seamlessly - users shouldn't need to know which agent does what
 - **CRITICAL**: Always show SQL to users before executing (security best practice)
 - Never auto-execute SQL without user confirmation
+- **CRITICAL**: When tools return JSON with sql_scripts, validation_errors, or other data fields, you MUST include them in your response
+- **DO NOT TRUNCATE** tool responses - return the complete JSON including all sql_scripts, error details, etc.
+- The UI needs the complete data from tool responses to display to users
 - **ETL Customization**: Always offer to save generated SQL so users can modify it
 - Users can save their custom SQL and execute it by script_id
 - Same script_id updates/overwrites existing script

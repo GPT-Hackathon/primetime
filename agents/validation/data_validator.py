@@ -10,7 +10,7 @@ import os
 import json
 import uuid
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from google.cloud import bigquery
 from vertexai.generative_models import GenerativeModel, FunctionDeclaration, Tool
 import vertexai
@@ -247,7 +247,7 @@ Generate validation queries now.
         return []
 
 
-def execute_validation_query(query_obj: Dict, source_table: str, target_table: str, run_id: str, dataset_id: str, mode: str) -> int:
+def execute_validation_query(query_obj: Dict, source_table: str, target_table: str, run_id: str, dataset_id: str, mode: str) -> Tuple[int, Dict[str, any]]:
     """
     Execute a validation SQL query and log errors to staging_errors table.
 
@@ -265,7 +265,7 @@ def execute_validation_query(query_obj: Dict, source_table: str, target_table: s
         results = list(query_job.result())
 
         if not results or len(results) == 0:
-            return 0
+            return (0, {})
 
         error_count = results[0].error_count if hasattr(results[0], 'error_count') else 0
 
@@ -291,15 +291,15 @@ def execute_validation_query(query_obj: Dict, source_table: str, target_table: s
             bq_client.query(insert_query).result()
             print(f"  ✗ {error_type}: {error_count} row(s) - {error_message}")
 
-            return error_count
+            return (error_count, {"table_name": "", "error_type": error_type, "error_message": error_message})
         else:
             print(f"  ✓ {error_type}: No issues found")
-            return 0
+            return (0, {})
 
     except Exception as e:
         print(f"  ✗ Query execution failed for {error_type}: {e}")
         print(f"  SQL: {sql_query[:200]}")
-        return 0
+        return (0, {})
 
 
 def validate_table_mapping(
@@ -368,9 +368,10 @@ def validate_table_mapping(
 
     # Execute each validation query
     total_errors = 0
+    errors = []
     for idx, query_obj in enumerate(queries, 1):
         print(f"[{idx}/{len(queries)}] Running {query_obj.get('error_type')} check...")
-        error_count = execute_validation_query(
+        error_count_and_message = execute_validation_query(
             query_obj=query_obj,
             source_table=source_table,
             target_table=target_table,
@@ -378,14 +379,16 @@ def validate_table_mapping(
             dataset_id=dataset_id,
             mode=mode
         )
-        total_errors += error_count
+        total_errors += error_count_and_message[0]
+        errors.append(error_count_and_message[1])
 
     return {
         "source_table": source_table,
         "target_table": target_table,
         "total_errors": total_errors,
         "validations_run": len(queries),
-        "status": "success"
+        "status": "success",
+        "errors": errors
     }
 
 

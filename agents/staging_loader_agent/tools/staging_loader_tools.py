@@ -24,6 +24,7 @@ def _parse_schema_simple(schema_content: str, table_name: str, schema_filename: 
     """
     try:
         schema_data = json.loads(schema_content)
+        print(f"Schema JSON top-level keys: {list(schema_data.keys()) if isinstance(schema_data, dict) else 'array'}")
 
         # Format 1: Direct array of field definitions
         if isinstance(schema_data, list):
@@ -42,13 +43,17 @@ def _parse_schema_simple(schema_content: str, table_name: str, schema_filename: 
             # Format 3: Tables array format (WorldBank style)
             # Match by file field: "file": "source_countries.csv" matches table_name "source_countries"
             if "tables" in schema_data and isinstance(schema_data["tables"], list):
-                for table_def in schema_data["tables"]:
+                print(f"Found 'tables' array with {len(schema_data['tables'])} tables")
+                for idx, table_def in enumerate(schema_data["tables"]):
                     if not isinstance(table_def, dict):
                         continue
 
                     # Match by file field (e.g., "source_countries.csv" → "source_countries")
                     file_field = table_def.get("file", "")
                     file_base = os.path.splitext(file_field)[0]  # Remove .csv extension
+                    logical_name = table_def.get("table_name", "")
+
+                    print(f"  Table {idx}: file='{file_field}', file_base='{file_base}', table_name='{logical_name}', looking_for='{table_name}'")
 
                     if file_base == table_name:
                         # Found matching table by file field
@@ -229,18 +234,22 @@ def load_csv_to_bigquery_from_gcs(
         # Look for any schema file in the same GCS directory
         # Try multiple patterns: schema.json, *_schema.json, *schema*.json
         directory = os.path.dirname(file_path)
+        print(f"Searching for schema files in directory: 'gs://{bucket_name}/{directory}/'")
+
         try:
             bucket = storage_client.bucket(bucket_name)
             
             # List all files in the directory
             blobs = list(bucket.list_blobs(prefix=directory))
-            
+            print(f"Found {len(blobs)} total files in directory")
+
             # Find files with "schema" in the name (case-insensitive)
             schema_files = [
-                blob for blob in blobs 
+                blob for blob in blobs
                 if 'schema' in blob.name.lower() and blob.name.endswith('.json')
             ]
-            
+            print(f"Found {len(schema_files)} schema files: {[blob.name for blob in schema_files]}")
+
             if schema_files:
                 # Use the first schema file found
                 schema_blob = schema_files[0]
@@ -250,6 +259,7 @@ def load_csv_to_bigquery_from_gcs(
                 schema_content = schema_blob.download_as_text()
 
                 # Parse the schema using simple logic (handles common formats)
+                print(f"Parsing schema file for table_name: '{table_name}'")
                 schema = _parse_schema_simple(schema_content, table_name, os.path.basename(schema_path))
             else:
                 print(f"No schema file found in 'gs://{bucket_name}/{directory}/'. Using schema auto-detection.")
