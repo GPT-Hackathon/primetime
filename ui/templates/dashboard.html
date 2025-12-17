@@ -895,6 +895,25 @@
                 </button>
             </div>
 
+            <!-- Re-run Current Step Section -->
+            <div x-show="pipelineState.status === 'running' && pipelineState.awaitingContinue" class="mt-4 bg-gray-700/50 rounded-lg p-4">
+                <h3 class="text-sm font-semibold text-gray-300 mb-2">Re-run Current Step with Additional Instructions</h3>
+                <textarea
+                    x-model="rerunInstructions"
+                    placeholder="Enter additional instructions for the agent (e.g., 'use different column mappings', 'ignore null values')..."
+                    rows="2"
+                    class="w-full bg-gray-900 border border-gray-600 rounded-md p-3 text-white placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
+                ></textarea>
+                <button
+                    @click="rerunStep()"
+                    :disabled="rerunning"
+                    class="mt-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-md font-semibold transition-colors"
+                >
+                    <span x-show="!rerunning">Re-run Step</span>
+                    <span x-show="rerunning">Re-running...</span>
+                </button>
+            </div>
+
             <!-- Completed Message -->
             <div x-show="pipelineState.status === 'completed'" class="text-center py-4">
                 <p class="text-green-400 text-lg font-semibold">Pipeline completed successfully!</p>
@@ -989,6 +1008,8 @@
                     lastResult: null,
                     error: null
                 },
+                rerunInstructions: '',
+                rerunning: false,
                 pipelinePollInterval: null,
                 previewData: {
                     show: false,
@@ -1232,6 +1253,44 @@
                         }
                     } catch (error) {
                         console.error('Failed to stop pipeline:', error);
+                    }
+                },
+
+                async rerunStep() {
+                    try {
+                        this.rerunning = true;
+                        const response = await fetch('/api/pipeline/rerun', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                step: this.pipelineState.currentStep,
+                                instructions: this.rerunInstructions
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            // Reset state for re-run
+                            this.pipelineState.awaitingContinue = false;
+                            this.rerunInstructions = '';
+
+                            // Resume polling
+                            if (!this.pipelinePollInterval) {
+                                this.pipelinePollInterval = setInterval(() => {
+                                    this.fetchPipelineStatus();
+                                }, 1000);
+                            }
+                        } else {
+                            alert(`Error: ${data.error}`);
+                        }
+                    } catch (error) {
+                        console.error('Failed to re-run step:', error);
+                        alert('Failed to re-run step');
+                    } finally {
+                        this.rerunning = false;
                     }
                 },
 

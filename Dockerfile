@@ -9,6 +9,11 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PORT=8080
 ENV PYTHONPATH=/app
+ENV PROJECT_ID=ccibt-hack25ww7-750
+ENV GOOGLE_CLOUD_PROJECT=ccibt-hack25ww7-750
+ENV GCP_PROJECT_ID=ccibt-hack25ww7-750
+ENV GOOGLE_CLOUD_LOCATION=us-central1
+ENV FLASK_DEBUG=false
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \

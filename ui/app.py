@@ -1687,6 +1687,98 @@ def pipeline_status():
     })
 
 
+@app.route('/api/pipeline/rerun', methods=['POST'])
+def rerun_pipeline_step():
+    """Re-run the current pipeline step with additional user instructions."""
+    global pipeline_state
+
+    if pipeline_state['status'] != 'running':
+        return jsonify({'error': 'Pipeline is not running'}), 400
+
+    if not pipeline_state.get('awaiting_continue'):
+        return jsonify({'error': 'Pipeline is not awaiting confirmation'}), 400
+
+    try:
+        data = request.json or {}
+        step = data.get('step', pipeline_state.get('current_step', 'schema_mapping'))
+        user_instructions = data.get('instructions', '')
+
+        log_event(f"Re-running step: {step} with additional instructions", 'info')
+
+        # Build the re-run prompt
+        mode = pipeline_state.get('mode', 'FIX')
+        staging_dataset = session_state.get('staging_dataset', '')
+        target_dataset = session_state.get('target_dataset', '')
+
+        if step == 'schema_mapping':
+            rerun_prompt = f"""Re-run Step 1: Schema Mapping with the following additional instructions from the user:
+
+USER INSTRUCTIONS: {user_instructions}
+
+Please regenerate the schema mapping between:
+- Source: {staging_dataset}
+- Target: {target_dataset}
+- Mode: {mode}
+
+Take into account the user's instructions when generating the mapping.
+
+IMPORTANT: Provide results in JSON format with schema_mapping_result containing the full mapping data.
+"""
+        elif step == 'validation':
+            last_result = pipeline_state.get('last_result', {})
+            mapping_id = last_result.get('details', {}).get('mapping_id', '')
+            rerun_prompt = f"""Re-run Step 2: Data Validation with the following additional instructions from the user:
+
+USER INSTRUCTIONS: {user_instructions}
+
+Please re-validate the data in staging dataset {staging_dataset} using the existing mapping.
+mapping_id: {mapping_id}
+Mode: {mode}
+
+Take into account the user's instructions when performing validation.
+
+IMPORTANT: Provide results in JSON format with validation_result_json containing the validation details.
+"""
+        elif step == 'etl':
+            last_result = pipeline_state.get('last_result', {})
+            mapping_id = last_result.get('details', {}).get('mapping_id', '')
+            rerun_prompt = f"""Re-run Step 3: ETL SQL Generation with the following additional instructions from the user:
+
+USER INSTRUCTIONS: {user_instructions}
+
+Please regenerate the ETL SQL scripts for loading data from {staging_dataset} to {target_dataset}.
+mapping_id: {mapping_id}
+
+Take into account the user's instructions when generating the SQL.
+
+IMPORTANT: Provide results in JSON format with the SQL scripts.
+"""
+        else:
+            rerun_prompt = f"""Re-run the current step with the following additional instructions from the user:
+
+USER INSTRUCTIONS: {user_instructions}
+
+Please redo the current operation taking into account the user's feedback.
+"""
+
+        # Reset awaiting state
+        pipeline_state['awaiting_continue'] = False
+
+        # Run the re-run prompt in a separate thread using existing function
+        thread = threading.Thread(target=run_agent_step_async, args=(rerun_prompt,))
+        thread.start()
+
+        return jsonify({
+            'status': 'rerunning',
+            'step': step,
+            'message': f'Re-running {step} with user instructions'
+        })
+
+    except Exception as e:
+        log_event(f"Error re-running step: {str(e)}", 'error')
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/stream')
 def stream():
     """Server-Sent Events stream for real-time updates."""
