@@ -1,9 +1,86 @@
-
 import os
 import json
 from google.cloud import bigquery
 from google.cloud import storage
 from google.api_core.exceptions import NotFound
+
+
+def _parse_schema_simple(schema_content: str, table_name: str, schema_filename: str):
+    """
+    Parse schema JSON using simple programmatic logic.
+
+    Handles common formats:
+    1. Direct array: [{"name": "col1", "type": "STRING", ...}]
+    2. Dictionary with table names: {"table1": [...], "table2": [...]}
+    3. Tables array format: {"tables": [{"table_name": "x", "file": "y.csv", "columns": [...]}]}
+
+    Args:
+        schema_content: Raw JSON content from schema file
+        table_name: The table name to find schema for (derived from CSV filename without extension)
+        schema_filename: Name of the schema file (for logging)
+
+    Returns:
+        List of bigquery.SchemaField objects, or None if schema not found
+    """
+    try:
+        schema_data = json.loads(schema_content)
+
+        # Format 1: Direct array of field definitions
+        if isinstance(schema_data, list):
+            schema = [bigquery.SchemaField.from_api_repr(field) for field in schema_data]
+            print(f"Successfully parsed schema from '{schema_filename}' (direct array format).")
+            return schema
+
+        if isinstance(schema_data, dict):
+            # Format 2: Dictionary with table names as keys
+            if table_name in schema_data and isinstance(schema_data[table_name], list):
+                schema_def = schema_data[table_name]
+                schema = [bigquery.SchemaField.from_api_repr(field) for field in schema_def]
+                print(f"Successfully parsed schema for table '{table_name}' from '{schema_filename}'.")
+                return schema
+
+            # Format 3: Tables array format (WorldBank style)
+            # Match by file field: "file": "source_countries.csv" matches table_name "source_countries"
+            if "tables" in schema_data and isinstance(schema_data["tables"], list):
+                for table_def in schema_data["tables"]:
+                    if not isinstance(table_def, dict):
+                        continue
+
+                    # Match by file field (e.g., "source_countries.csv" → "source_countries")
+                    file_field = table_def.get("file", "")
+                    file_base = os.path.splitext(file_field)[0]  # Remove .csv extension
+
+                    if file_base == table_name:
+                        # Found matching table by file field
+                        columns = table_def.get("columns", [])
+                        if columns:
+                            # Convert columns to BigQuery SchemaField format
+                            # Input: [{"name": "x", "type": "STRING", "description": "..."}, ...]
+                            # Output: BigQuery SchemaField objects
+                            schema = []
+                            for col in columns:
+                                # Create SchemaField with name, type, and mode
+                                field = bigquery.SchemaField(
+                                    name=col["name"],
+                                    field_type=col["type"],
+                                    mode=col.get("mode", "NULLABLE"),
+                                    description=col.get("description", "")
+                                )
+                                schema.append(field)
+
+                            logical_name = table_def.get("table_name", table_name)
+                            print(f"Successfully parsed schema for table '{logical_name}' (file: {file_field}) from '{schema_filename}'.")
+                            return schema
+
+        # Not found or unrecognized format
+        print(f"Warning: Could not find schema for table '{table_name}' in '{schema_filename}'. "
+              "Falling back to auto-detection.")
+        return None
+
+    except Exception as e:
+        print(f"Warning: Error parsing schema from '{schema_filename}': {e}. Falling back to auto-detection.")
+        return None
+
 
 def get_project_id():
     """Gets the project ID from the environment."""
@@ -56,6 +133,50 @@ def find_schema_files_in_gcs(bucket_name: str, prefix: str = "") -> str:
         return json.dumps({
             "status": "error",
             "message": f"Error finding schema files: {str(e)}"
+        }, indent=2)
+
+
+def read_schema_file_from_gcs(bucket_name: str, file_path: str) -> str:
+    """
+    Read a schema file from GCS and return its content.
+
+    This allows the orchestrator agent to read the schema file and
+    let its LLM parse/understand the schema format.
+
+    Args:
+        bucket_name: GCS bucket name
+        file_path: Path to the schema file (e.g., "data/schema.json")
+
+    Returns:
+        JSON string with the schema file content
+    """
+    try:
+        project_id = get_project_id()
+        storage_client = storage.Client(project=project_id)
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(file_path)
+
+        if not blob.exists():
+            return json.dumps({
+                "status": "error",
+                "message": f"Schema file not found: gs://{bucket_name}/{file_path}"
+            }, indent=2)
+
+        # Read the file content
+        schema_content = blob.download_as_text()
+
+        return json.dumps({
+            "status": "success",
+            "bucket": bucket_name,
+            "file_path": file_path,
+            "content": schema_content,
+            "message": "Schema file read successfully. Parse the 'content' field to extract the schema for your table."
+        }, indent=2)
+
+    except Exception as e:
+        return json.dumps({
+            "status": "error",
+            "message": f"Error reading schema file: {str(e)}"
         }, indent=2)
 
 
@@ -127,16 +248,9 @@ def load_csv_to_bigquery_from_gcs(
                 print(f"Found schema file at 'gs://{bucket_name}/{schema_path}'.")
                 
                 schema_content = schema_blob.download_as_text()
-                all_schemas = json.loads(schema_content)
-                
-                # Find the schema definition for the current table
-                if table_name in all_schemas:
-                    schema_definition = all_schemas[table_name]
-                    schema = [bigquery.SchemaField.from_api_repr(field) for field in schema_definition]
-                    print(f"Successfully parsed schema for table '{table_name}' from '{os.path.basename(schema_path)}'.")
-                else:
-                    print(f"Warning: Schema file '{os.path.basename(schema_path)}' found, but no entry for table '{table_name}'. "
-                          "Falling back to auto-detection.")
+
+                # Parse the schema using simple logic (handles common formats)
+                schema = _parse_schema_simple(schema_content, table_name, os.path.basename(schema_path))
             else:
                 print(f"No schema file found in 'gs://{bucket_name}/{directory}/'. Using schema auto-detection.")
         except Exception as e:

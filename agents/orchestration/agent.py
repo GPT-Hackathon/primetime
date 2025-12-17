@@ -45,9 +45,9 @@ def load_staging_data(dataset_name: str, bucket_name: str, file_path: str, workf
     """
     Load CSV data from Google Cloud Storage into BigQuery staging table.
     
-    Delegates to the Staging Loader Agent to load data from GCS.
+    Delegates to the Staging Loader Agent (sub-agent invocation).
 
-    Args:
+    Args
         dataset_name: Target BigQuery dataset name (e.g., "worldbank_staging_dataset")
         bucket_name: GCS bucket name where CSV files are located
         file_path: Path to the CSV file within the bucket (e.g., "data/countries.csv")
@@ -57,10 +57,10 @@ def load_staging_data(dataset_name: str, bucket_name: str, file_path: str, workf
         JSON string with load results and workflow context
     """
     try:
-        # Import the staging loader function
+        # Import the staging loader tool (not the agent)
         from agents.staging_loader_agent.tools.staging_loader_tools import load_csv_to_bigquery_from_gcs
-        
-        print(f"🔄 Orchestrator: Calling Staging Loader Agent...")
+
+        print(f"🔄 Orchestrator: Calling Staging Loader tool...")
         print(f"   Dataset: {dataset_name}")
         print(f"   Bucket: {bucket_name}")
         print(f"   File: {file_path}")
@@ -72,13 +72,13 @@ def load_staging_data(dataset_name: str, bucket_name: str, file_path: str, workf
         if not workflow_id:
             workflow_id = f"workflow_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
         
-        # Call the staging loader agent
+        # Call the staging loader tool directly
         result = load_csv_to_bigquery_from_gcs(
             dataset_name=dataset_name,
             bucket_name=bucket_name,
             file_path=file_path
         )
-        
+
         # Store in orchestrator's memory
         load_id = f"{dataset_name}_{os.path.basename(file_path).replace('.csv', '')}"
         _staging_loads[load_id] = {
@@ -221,6 +221,43 @@ def find_schema_files(bucket_name: str, prefix: str = "") -> str:
         }, indent=2)
 
 
+def read_schema_file(bucket_name: str, file_path: str) -> str:
+    """
+    Read a schema file from GCS and return its content.
+
+    Use this to read a schema file so you can understand its format and
+    parse it to extract the schema for a specific table. Your LLM can
+    intelligently parse any schema format.
+
+    Args:
+        bucket_name: GCS bucket name
+        file_path: Path to the schema file (e.g., "data/schema.json")
+
+    Returns:
+        JSON string with the schema file content
+    """
+    try:
+        # Set environment variable
+        os.environ["GCP_PROJECT_ID"] = project_id
+
+        # Import the function from staging loader agent
+        from agents.staging_loader_agent.tools.staging_loader_tools import read_schema_file_from_gcs
+
+        print(f"🔄 Orchestrator: Reading schema file...")
+        print(f"   Bucket: {bucket_name}")
+        print(f"   File: {file_path}")
+
+        result = read_schema_file_from_gcs(bucket_name=bucket_name, file_path=file_path)
+
+        return result
+
+    except Exception as e:
+        return json.dumps({
+            "status": "error",
+            "message": f"Error reading schema file: {str(e)}"
+        }, indent=2)
+
+
 # --- Schema Mapping Tools (Delegates to Schema Mapping Agent) ---
 
 def generate_schema_mapping(source_dataset: str, target_dataset: str, mode: str = "FIX", workflow_id: str = None) -> str:
@@ -241,7 +278,7 @@ def generate_schema_mapping(source_dataset: str, target_dataset: str, mode: str 
     try:
         # Import the schema mapping function
         from agents.schema_mapping.schema_mapper import generate_schema_mapping as sm_generate
-        
+
         print(f"🔄 Orchestrator: Calling Schema Mapping Agent...")
         print(f"   Source: {source_dataset}")
         print(f"   Target: {target_dataset}")
@@ -258,7 +295,7 @@ def generate_schema_mapping(source_dataset: str, target_dataset: str, mode: str 
             output_file=f"/tmp/mapping_{workflow_id}.json",
             mode=mode
         )
-        
+
         if result.get("status") == "success":
             # Store in orchestrator's memory
             mapping_id = f"{source_dataset}_to_{target_dataset}_{mode.lower()}"
@@ -266,7 +303,7 @@ def generate_schema_mapping(source_dataset: str, target_dataset: str, mode: str 
             action = "updated" if is_update else "generated"
             
             _schema_mappings[mapping_id] = result["mapping"]
-            
+
             # Update workflow state
             if workflow_id not in _workflow_state:
                 _workflow_state[workflow_id] = {
@@ -369,14 +406,14 @@ def validate_data(mapping_id: str, mode: str = "REPORT", workflow_id: str = None
         
         # Import validation function
         from agents.validation.data_validator import validate_schema_mapping as validate
-        
+
         # Call the validation agent
         result = validate(
             schema_mapping_json=json.dumps({"mapping": mapping_data}),
             source_dataset=source_dataset,
             mode=mode
         )
-        
+
         if result.get("status") == "success":
             # Store validation results
             validation_id = f"{mapping_id}_validation_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
@@ -730,7 +767,7 @@ def generate_etl_sql(mapping_id: str, workflow_id: str = None) -> str:
         
         # Import the ETL SQL generation function
         from agents.etl_agent.tools.gen_etl_sql import generate_etl_sql_from_json_string
-        
+
         print(f"🔄 Orchestrator: Calling ETL Agent to generate SQL...")
         print(f"   Mapping ID: {mapping_id}")
         
@@ -747,7 +784,7 @@ def generate_etl_sql(mapping_id: str, workflow_id: str = None) -> str:
 
         # Generate SQL scripts
         sql_scripts = generate_etl_sql_from_json_string(mapping_json)
-        
+
         # Store the generated SQL
         etl_id = f"{mapping_id}_etl"
         _etl_sql_scripts[etl_id] = {
@@ -813,7 +850,7 @@ def execute_etl_sql(etl_id: str, target_dataset: str, workflow_id: str = None) -
         
         # Import the SQL execution function
         from agents.etl_agent.tools.gen_etl_sql import execute_sql
-        
+
         print(f"🔄 Orchestrator: Calling ETL Agent to execute SQL...")
         print(f"   ETL ID: {etl_id}")
         print(f"   Target Dataset: {target_dataset}")
@@ -830,7 +867,7 @@ def execute_etl_sql(etl_id: str, target_dataset: str, workflow_id: str = None) -
             query_sql=sql_scripts,
             dataset_name=target_dataset
         )
-        
+
         # Store execution results
         execution_id = f"{etl_id}_execution"
         _etl_execution_results[execution_id] = {
@@ -1119,21 +1156,27 @@ def execute_saved_etl_script(script_id: str, target_dataset: str, workflow_id: s
 root_agent = Agent(
     model='gemini-2.5-flash',
     name='orchestration_agent',
-    description='Orchestrates multiple AI agents for end-to-end data integration workflows.',
-    instruction="""You are an Orchestration Agent that coordinates multiple specialized agents to complete data integration workflows.
+    description='Orchestrates data integration workflows by coordinating specialized tools.',
+    instruction="""You are an Orchestration Agent that coordinates data integration workflows using specialized tools.
 
 **Your Role:**
-You manage end-to-end data integration workflows by coordinating:
-1. **Staging Loader Agent**: Loads CSV data from GCS to BigQuery staging tables
-2. **Schema Mapping Agent**: Generates intelligent schema mappings between datasets
-3. **Validation Agent**: Validates data quality based on schema mappings
-4. **ETL Agent**: Generates and executes SQL scripts to load data from staging to target tables
+You manage end-to-end data integration workflows using tools for:
+1. **Data Loading**: Load CSV data from GCS to BigQuery staging tables
+2. **Schema Mapping**: Generate intelligent schema mappings between datasets
+3. **Data Validation**: Validate data quality and integrity
+4. **ETL**: Generate and execute SQL scripts to transform and load data
 
 **Your Capabilities:**
 
 **Data Loading (STAGE 1):**
 - `load_staging_data(dataset_name, bucket_name, file_path, workflow_id)`: Load CSV from GCS to BigQuery
+  * Automatically finds schema files in GCS (any .json file with 'schema' in name)
+  * Parses schema in multiple formats (array, dict, nested)
+  * Falls back to auto-detection if no schema found
 - `find_schema_files(bucket_name, prefix)`: Find all schema files in GCS bucket
+- `read_schema_file(bucket_name, file_path)`: Read a schema file and return its content
+  * Your LLM can parse the schema content intelligently
+  * Useful when you need to understand the schema before loading
 - `get_staging_load(load_id)`: Retrieve load results
 - `list_staging_loads()`: See all data loads
 
@@ -1280,6 +1323,7 @@ You are the single point of contact for data integration workflows. Make the pro
         # Staging loader tools (STAGE 1)
         load_staging_data,
         find_schema_files,
+        read_schema_file,
         get_staging_load,
         list_staging_loads,
         # Schema mapping tools (STAGE 2)
