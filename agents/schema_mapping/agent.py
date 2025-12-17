@@ -34,10 +34,12 @@ _mapping_store = {}
 
 def save_mapping(mapping_json: str, mapping_id: str) -> str:
     """
-    Save a mapping to memory with an ID for later retrieval.
+    Save or update a mapping in memory with an ID for later retrieval.
     
     Use this to store generated mappings so you can reference them later,
     extract parts, modify them, or use them with other operations.
+    
+    **Note**: If a mapping with the same ID already exists, it will be **overwritten/updated**.
 
     Args:
         mapping_json: The JSON string of the mapping to save
@@ -50,12 +52,18 @@ def save_mapping(mapping_json: str, mapping_id: str) -> str:
         # Validate it's valid JSON
         json.loads(mapping_json)
         
+        # Check if this is an update or new save
+        is_update = mapping_id in _mapping_store
+        action = "updated" if is_update else "saved"
+        
         _mapping_store[mapping_id] = mapping_json
         
         return json.dumps({
             "status": "success",
-            "message": f"Mapping saved as '{mapping_id}'",
+            "action": action,
+            "message": f"Mapping {action} as '{mapping_id}'" + (" (overwrote existing mapping)" if is_update else ""),
             "mapping_id": mapping_id,
+            "is_new": not is_update,
             "available_mappings": list(_mapping_store.keys()),
             "total_saved": len(_mapping_store)
         }, indent=2)
@@ -627,7 +635,7 @@ Your capabilities:
 3. **generate_schema_mapping**: Generate comprehensive schema mappings between source and target datasets
 
 **State Management:**
-4. **save_mapping**: Save a generated mapping with an ID for later use
+4. **save_mapping**: Save or update a mapping with an ID (same ID overwrites existing)
 5. **load_mapping**: Load a previously saved mapping by ID
 6. **list_mappings**: List all saved mappings in this session
 7. **extract_validation_rules**: Extract validation rules from a saved mapping
@@ -652,6 +660,9 @@ When a user asks to create a schema mapping:
 - Users can load saved mappings later to review, extract parts, or compare
 - Use extract_validation_rules to get validation rules for specific tables
 - List saved mappings when users ask what's available
+- **To update a mapping**: Users can modify the JSON and save it again with the same ID
+  - The system will automatically detect it's an update and overwrite the previous version
+  - Always inform users when a mapping is being updated vs newly created
 
 **Important:**
 - Save mappings proactively so users can reference them later

@@ -262,6 +262,9 @@ def generate_schema_mapping(source_dataset: str, target_dataset: str, mode: str 
         if result.get("status") == "success":
             # Store in orchestrator's memory
             mapping_id = f"{source_dataset}_to_{target_dataset}_{mode.lower()}"
+            is_update = mapping_id in _schema_mappings
+            action = "updated" if is_update else "generated"
+            
             _schema_mappings[mapping_id] = result["mapping"]
             
             # Update workflow state
@@ -288,7 +291,9 @@ def generate_schema_mapping(source_dataset: str, target_dataset: str, mode: str 
                 "status": "success",
                 "workflow_id": workflow_id,
                 "mapping_id": mapping_id,
-                "message": f"Schema mapping generated successfully",
+                "action": action,
+                "is_update": is_update,
+                "message": f"Schema mapping {action} successfully" + (" (overwrote existing mapping)" if is_update else ""),
                 "summary": {
                     "num_table_mappings": len(result["mapping"].get("mappings", [])),
                     "confidence": result["mapping"].get("metadata", {}).get("confidence", "unknown"),
