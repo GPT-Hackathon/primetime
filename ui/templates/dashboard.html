@@ -770,14 +770,14 @@
                     class="px-3 py-1 rounded-full text-sm font-medium"
                     :class="{
                         'bg-blue-600 animate-pulse': pipelineState.status === 'running' && !pipelineState.awaitingContinue,
-                        'bg-yellow-600': pipelineState.awaitingContinue,
+                        'bg-yellow-600': pipelineState.status === 'running' && pipelineState.awaitingContinue,
                         'bg-green-600': pipelineState.status === 'completed',
                         'bg-red-600': pipelineState.status === 'error',
                         'bg-gray-600': pipelineState.status === 'stopped'
                     }"
                 >
                     <span x-show="pipelineState.status === 'running' && !pipelineState.awaitingContinue">Running...</span>
-                    <span x-show="pipelineState.awaitingContinue">Awaiting Confirmation</span>
+                    <span x-show="pipelineState.status === 'running' && pipelineState.awaitingContinue">Awaiting Confirmation</span>
                     <span x-show="pipelineState.status === 'completed'">Completed</span>
                     <span x-show="pipelineState.status === 'error'">Error</span>
                     <span x-show="pipelineState.status === 'stopped'">Stopped</span>
@@ -880,7 +880,7 @@
             </div>
 
             <!-- Continue/Stop Buttons -->
-            <div x-show="pipelineState.awaitingContinue" class="flex gap-3">
+            <div x-show="pipelineState.status === 'running' && pipelineState.awaitingContinue" class="flex gap-3">
                 <button
                     @click="continuePipeline()"
                     class="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 rounded-md font-semibold transition-colors"
