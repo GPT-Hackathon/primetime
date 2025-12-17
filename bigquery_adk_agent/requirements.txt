@@ -3,3 +3,6 @@ google-adk
 google-cloud-storage
 python-dotenv
 sqlparse
+matplotlib
+pandas
+db-dtypes
