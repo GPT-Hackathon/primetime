@@ -911,6 +911,193 @@ def list_etl_scripts() -> str:
     }, indent=2)
 
 
+def save_etl_sql_script(sql_script: str, script_id: str, workflow_id: str = None) -> str:
+    """
+    Save or update a custom ETL SQL script.
+    
+    Users can save generated SQL or their own modified SQL scripts.
+    Same script_id overwrites existing script (for updates).
+
+    Args:
+        sql_script: The SQL script to save
+        script_id: Unique identifier for this script (e.g., "worldbank_custom_v1")
+        workflow_id: Optional workflow ID to track this save
+
+    Returns:
+        JSON string with status
+    """
+    try:
+        # Import the save function from ETL agent
+        from agents.etl_agent.tools.gen_etl_sql import save_etl_sql
+        
+        print(f"🔄 Orchestrator: Saving ETL SQL script...")
+        print(f"   Script ID: {script_id}")
+        
+        # Set environment variable for ETL agent to use
+        os.environ["GCP_PROJECT_ID"] = project_id
+        
+        # Call the ETL agent's save function
+        result = save_etl_sql(sql_script, script_id)
+        
+        print(f"✅ Orchestrator: SQL script saved successfully!")
+        
+        return result
+            
+    except Exception as e:
+        error_msg = f"Error saving ETL SQL script: {str(e)}"
+        print(f"❌ Orchestrator: {error_msg}")
+        
+        return json.dumps({
+            "status": "error",
+            "message": error_msg
+        }, indent=2)
+
+
+def load_etl_sql_script(script_id: str) -> str:
+    """
+    Load a previously saved ETL SQL script.
+
+    Args:
+        script_id: The ID of the script to load
+
+    Returns:
+        The SQL script or error message
+    """
+    try:
+        # Import the load function from ETL agent
+        from agents.etl_agent.tools.gen_etl_sql import load_etl_sql
+        
+        print(f"🔄 Orchestrator: Loading ETL SQL script...")
+        print(f"   Script ID: {script_id}")
+        
+        # Set environment variable for ETL agent to use
+        os.environ["GCP_PROJECT_ID"] = project_id
+        
+        # Call the ETL agent's load function
+        result = load_etl_sql(script_id)
+        
+        print(f"✅ Orchestrator: SQL script loaded successfully!")
+        
+        return result
+            
+    except Exception as e:
+        error_msg = f"Error loading ETL SQL script: {str(e)}"
+        print(f"❌ Orchestrator: {error_msg}")
+        
+        return json.dumps({
+            "status": "error",
+            "message": error_msg
+        }, indent=2)
+
+
+def list_saved_etl_scripts() -> str:
+    """
+    List all saved custom ETL SQL scripts.
+    
+    This shows scripts saved with save_etl_sql_script(), which may include
+    user-modified scripts.
+
+    Returns:
+        JSON string with list of saved scripts
+    """
+    try:
+        # Import the list function from ETL agent
+        from agents.etl_agent.tools.gen_etl_sql import list_etl_sql_scripts
+        
+        print(f"🔄 Orchestrator: Listing saved ETL SQL scripts...")
+        
+        # Set environment variable for ETL agent to use
+        os.environ["GCP_PROJECT_ID"] = project_id
+        
+        # Call the ETL agent's list function
+        result = list_etl_sql_scripts()
+        
+        return result
+            
+    except Exception as e:
+        error_msg = f"Error listing saved ETL SQL scripts: {str(e)}"
+        print(f"❌ Orchestrator: {error_msg}")
+        
+        return json.dumps({
+            "status": "error",
+            "message": error_msg
+        }, indent=2)
+
+
+def execute_saved_etl_script(script_id: str, target_dataset: str, workflow_id: str = None) -> str:
+    """
+    Execute a saved ETL SQL script by ID.
+    
+    **IMPORTANT**: This will actually load data into your target tables.
+    Review the SQL script first before executing!
+
+    Args:
+        script_id: The ID of the saved script to execute
+        target_dataset: The target BigQuery dataset to load data into
+        workflow_id: Optional workflow ID to track this execution
+
+    Returns:
+        JSON string with execution results
+    """
+    try:
+        # Import the execute function from ETL agent
+        from agents.etl_agent.tools.gen_etl_sql import execute_sql
+        
+        print(f"🔄 Orchestrator: Executing saved ETL SQL script...")
+        print(f"   Script ID: {script_id}")
+        print(f"   Target Dataset: {target_dataset}")
+        
+        # Set environment variable for ETL agent to use
+        os.environ["GCP_PROJECT_ID"] = project_id
+        
+        # Execute the SQL by script_id
+        result = execute_sql(
+            script_id=script_id,
+            dataset_name=target_dataset
+        )
+        
+        # Store execution results
+        execution_id = f"{script_id}_execution"
+        _etl_execution_results[execution_id] = {
+            "script_id": script_id,
+            "target_dataset": target_dataset,
+            "result": result,
+            "executed_at": datetime.utcnow().isoformat(),
+            "workflow_id": workflow_id
+        }
+        
+        # Update workflow state
+        if workflow_id and workflow_id in _workflow_state:
+            _workflow_state[workflow_id]["steps"].append({
+                "step": "saved_etl_execution",
+                "status": "completed",
+                "execution_id": execution_id,
+                "script_id": script_id,
+                "timestamp": datetime.utcnow().isoformat()
+            })
+        
+        print(f"✅ Orchestrator: Saved ETL SQL executed successfully!")
+        print(f"   Execution ID: {execution_id}")
+        
+        return json.dumps({
+            "status": "success",
+            "execution_id": execution_id,
+            "script_id": script_id,
+            "target_dataset": target_dataset,
+            "result": result,
+            "message": "Saved ETL SQL executed successfully. Data loaded into target tables."
+        }, indent=2)
+            
+    except Exception as e:
+        error_msg = f"Error executing saved ETL SQL: {str(e)}"
+        print(f"❌ Orchestrator: {error_msg}")
+        
+        return json.dumps({
+            "status": "error",
+            "message": error_msg
+        }, indent=2)
+
+
 # --- Define the Orchestration Agent ---
 
 root_agent = Agent(
@@ -945,9 +1132,13 @@ You manage end-to-end data integration workflows by coordinating:
 
 **ETL Generation & Execution (STAGE 4):**
 - `generate_etl_sql(mapping_id, workflow_id)`: Generate SQL scripts from schema mapping
-- `execute_etl_sql(etl_id, target_dataset, workflow_id)`: Execute ETL SQL (after review!)
+- `execute_etl_sql(etl_id, target_dataset, workflow_id)`: Execute generated ETL SQL (after review!)
 - `get_etl_sql(etl_id)`: Retrieve generated SQL scripts
 - `list_etl_scripts()`: See all generated ETL scripts
+- `save_etl_sql_script(sql_script, script_id, workflow_id)`: Save or update custom SQL scripts
+- `load_etl_sql_script(script_id)`: Load a saved SQL script
+- `list_saved_etl_scripts()`: See all saved custom SQL scripts
+- `execute_saved_etl_script(script_id, target_dataset, workflow_id)`: Execute saved SQL script
 
 **Workflow Management:**
 - `run_complete_workflow(source_dataset, target_dataset, validation_mode)`: Run end-to-end workflow
@@ -996,7 +1187,7 @@ You: I'll run the complete workflow for you:
      Next steps: [Guide user on what to do with results]
 ```
 
-**Workflow 2: Step-by-Step with Review**
+**Workflow 2: Step-by-Step with Review and Custom SQL**
 ```
 User: Map worldbank_staging to worldbank_target
 You: [Call generate_schema_mapping]
@@ -1016,11 +1207,26 @@ You: [Call generate_etl_sql]
      Generated SQL scripts for loading data.
      **IMPORTANT**: Please review the SQL before executing.
      [Show SQL preview]
-     Would you like me to execute this SQL?
+     Would you like me to:
+     1. Execute this SQL
+     2. Save it for you to modify
      
-User: Yes, execute it
-You: [Call execute_etl_sql]
-     Data loaded successfully into target tables!
+User: Save it as worldbank_etl_v1
+You: [Call save_etl_sql_script]
+     ✓ Saved as 'worldbank_etl_v1'
+     
+User: [User modifies SQL and provides modified version]
+User: Save this modified SQL as worldbank_etl_v1
+You: [Call save_etl_sql_script with same ID]
+     ✓ Updated 'worldbank_etl_v1' (overwrote existing)
+     
+User: Execute worldbank_etl_v1 in target dataset
+You: [Call execute_saved_etl_script]
+     [Shows SQL]
+     **IMPORTANT**: Please confirm execution
+     
+User: Confirm
+You: ✓ Data loaded successfully with your custom SQL!
 ```
 
 **Workflow 3: Status Tracking**
@@ -1043,6 +1249,9 @@ You: [Call get_workflow_status]
 - Coordinate between agents seamlessly - users shouldn't need to know which agent does what
 - **CRITICAL**: Always show SQL to users before executing (security best practice)
 - Never auto-execute SQL without user confirmation
+- **ETL Customization**: Always offer to save generated SQL so users can modify it
+- Users can save their custom SQL and execute it by script_id
+- Same script_id updates/overwrites existing script
 
 **Error Handling:**
 - If schema mapping fails, explain the error and suggest fixes
@@ -1069,6 +1278,10 @@ You are the single point of contact for data integration workflows. Make the pro
         execute_etl_sql,
         get_etl_sql,
         list_etl_scripts,
+        save_etl_sql_script,
+        load_etl_sql_script,
+        list_saved_etl_scripts,
+        execute_saved_etl_script,
         # Workflow management tools
         run_complete_workflow,
         get_workflow_status,

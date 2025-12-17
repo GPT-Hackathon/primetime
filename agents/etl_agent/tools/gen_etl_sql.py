@@ -24,6 +24,118 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# In-memory storage for SQL scripts (per session)
+_sql_store = {}
+
+
+def save_etl_sql(sql_script: str, script_id: str) -> str:
+    """
+    Save or update an ETL SQL script with an ID for later retrieval and execution.
+    
+    Use this to store generated or custom SQL scripts. If the script_id already exists,
+    it will be updated (overwritten).
+
+    Args:
+        sql_script: The SQL script to save
+        script_id: A unique identifier for this script (e.g., "worldbank_etl_v1")
+
+    Returns:
+        JSON string with status
+    """
+    is_update = script_id in _sql_store
+    action = "updated" if is_update else "saved"
+    
+    _sql_store[script_id] = sql_script
+    
+    return json.dumps({
+        "status": "success",
+        "action": action,
+        "message": f"SQL script {action} as '{script_id}'" + (" (overwrote existing script)" if is_update else ""),
+        "script_id": script_id,
+        "is_new": not is_update,
+        "available_scripts": list(_sql_store.keys()),
+        "total_saved": len(_sql_store)
+    }, indent=2)
+
+
+def load_etl_sql(script_id: str) -> str:
+    """
+    Load a previously saved ETL SQL script by its ID.
+
+    Args:
+        script_id: The identifier of the script to load
+
+    Returns:
+        The SQL script if found, or error message
+    """
+    if script_id not in _sql_store:
+        return json.dumps({
+            "status": "error",
+            "message": f"SQL script '{script_id}' not found",
+            "available_scripts": list(_sql_store.keys()),
+            "hint": "Use list_etl_scripts to see all saved scripts"
+        }, indent=2)
+    
+    return _sql_store[script_id]
+
+
+def list_etl_sql_scripts() -> str:
+    """
+    List all saved ETL SQL scripts in the current session.
+
+    Returns:
+        JSON string with list of saved script IDs
+    """
+    if not _sql_store:
+        return json.dumps({
+            "status": "success",
+            "saved_scripts": [],
+            "count": 0,
+            "message": "No SQL scripts saved yet. Generate SQL and save it to get started."
+        }, indent=2)
+    
+    script_info = []
+    for script_id, sql_script in _sql_store.items():
+        script_info.append({
+            "id": script_id,
+            "size_bytes": len(sql_script),
+            "num_statements": sql_script.count("INSERT INTO")
+        })
+    
+    return json.dumps({
+        "status": "success",
+        "saved_scripts": script_info,
+        "count": len(_sql_store),
+        "script_ids": list(_sql_store.keys())
+    }, indent=2)
+
+
+def delete_etl_sql(script_id: str) -> str:
+    """
+    Delete a saved SQL script from memory.
+
+    Args:
+        script_id: The ID of the script to delete
+
+    Returns:
+        JSON string with status
+    """
+    if script_id not in _sql_store:
+        return json.dumps({
+            "status": "error",
+            "message": f"SQL script '{script_id}' not found",
+            "available_scripts": list(_sql_store.keys())
+        }, indent=2)
+    
+    del _sql_store[script_id]
+    
+    return json.dumps({
+        "status": "success",
+        "message": f"SQL script '{script_id}' deleted",
+        "remaining_scripts": list(_sql_store.keys()),
+        "count": len(_sql_store)
+    }, indent=2)
+
 
 def generate_select_expression(col_map: Dict[str, Any]) -> str:
     """
@@ -267,18 +379,42 @@ def generate_etl_sql_from_json_string(mapping_rules_json: str) -> str:
     except Exception as e:
         return f"An unexpected error occurred: {e}"
 
-def execute_sql(query_sql: str, dataset_name: str, hardcoded_dataset_to_replace: str = None) -> str:
+def execute_sql(query_sql: str = None, dataset_name: str = None, hardcoded_dataset_to_replace: str = None, script_id: str = None) -> str:
     """
     Executes a SQL query on a specified BigQuery dataset.
+    
+    Can execute SQL directly or load a saved script by ID.
 
     Args:
-        query_sql: The SQL query to execute.
-        dataset_name: The name of the BigQuery dataset to execute the query against.
-        hardcoded_dataset_to_replace: An optional hardcoded dataset name in the SQL to be replaced with the `dataset_name`.
+        query_sql: The SQL query to execute (if not using script_id)
+        dataset_name: The name of the BigQuery dataset to execute the query against
+        hardcoded_dataset_to_replace: An optional hardcoded dataset name in the SQL to be replaced with the `dataset_name`
+        script_id: Optional - ID of a saved script to execute instead of query_sql
 
     Returns:
-        A string containing the query results.
+        A string containing the query results
     """
+    # If script_id provided, load the script
+    if script_id:
+        if script_id not in _sql_store:
+            return json.dumps({
+                "status": "error",
+                "message": f"SQL script '{script_id}' not found",
+                "available_scripts": list(_sql_store.keys())
+            }, indent=2)
+        query_sql = _sql_store[script_id]
+    
+    if not query_sql:
+        return json.dumps({
+            "status": "error",
+            "message": "Either query_sql or script_id must be provided"
+        }, indent=2)
+    
+    if not dataset_name:
+        return json.dumps({
+            "status": "error",
+            "message": "dataset_name is required"
+        }, indent=2)
     # 1. Read PROJECT_ID from environment (consistent with other agents)
     project_id = os.getenv("GCP_PROJECT_ID", os.getenv("GOOGLE_CLOUD_PROJECT"))
     if not project_id:
